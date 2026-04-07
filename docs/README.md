@@ -102,6 +102,15 @@ import { createPaymentContext } from "agentpay-gateway/server";
 import { payFetch } from "agentpay-gateway/client";
 ```
 
+Run provider or gateway config through the fail-fast validators:
+
+```js
+import {
+  validateGatewayConfig,
+  validateProviderOptions,
+} from "agentpay-gateway/server";
+```
+
 Use the simpler declarative route API:
 
 ```js
@@ -242,6 +251,8 @@ To swap local fallback logic for Rust-backed execution:
 - `AUTO_FUND_TESTNET_ACCOUNTS=true` is useful for local testnet demos.
 - `X402_ASSET=USDC` is the primary stablecoin path now that Soroban payments work end to end.
 - `X402_ASSET=native` remains the simplest fallback demo path.
+- gateway and provider startup now fail fast on invalid wallet addresses, URLs,
+  route methods, route pricing, and malformed storage configs.
 
 ## Request Lifecycle
 

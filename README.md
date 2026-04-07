@@ -92,6 +92,8 @@ The package now exposes a reusable provider surface for implementers:
 - `createAgentPayApp(...)`
 - `createAgentPayProvider(...)`
 - `registerAgentPayRoutes(app, ...)`
+- `validateProviderOptions(...)`
+- `validateGatewayConfig(...)`
 - `createIntentStore(...)`
 - `createMemoryIntentStorage(...)`
 - `createFileIntentStorage(...)`
@@ -109,6 +111,10 @@ import { createPaymentContext } from "agentpay-gateway/server";
 import { getPriceUsd } from "agentpay-gateway/pricing";
 import { payFetch } from "agentpay-gateway/client";
 ```
+
+AgentPay validates provider and gateway config before route registration. Invalid
+wallets, URLs, route methods, prices, or storage definitions fail fast during
+startup instead of surfacing later as runtime payment errors.
 
 The simplest integration path is now a declarative protected-route array:
 
@@ -132,6 +138,23 @@ registerAgentPayRoutes(app, {
       }),
     },
   ],
+});
+```
+
+If you want an explicit preflight step in your own app, call the validators
+directly:
+
+```js
+import {
+  validateGatewayConfig,
+  validateProviderOptions,
+} from "agentpay-gateway/server";
+
+const gatewayConfig = validateGatewayConfig(config);
+validateProviderOptions({
+  config: gatewayConfig,
+  routes,
+  storage,
 });
 ```
 

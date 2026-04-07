@@ -2,6 +2,7 @@ export {
   createAgentPayApp,
   createAgentPayProvider,
   registerAgentPayRoutes,
+  validateProviderOptions,
   createFileIntentStorage,
   createMemoryIntentStorage,
   createIntentStore,
@@ -15,6 +16,7 @@ export {
 export {
   createPaymentContext,
   loadGatewayConfig,
+  validateGatewayConfig,
   requirePayment,
   requirePaymentWith,
 } from "./payments.js";
