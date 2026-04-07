@@ -10,6 +10,12 @@ There are two main execution paths:
 1. The gateway in [server/server.js](/home/kelly-musk/agentpay-server/server/server.js)
 2. The CLI payer in [client/client.js](/home/kelly-musk/agentpay-server/client/client.js)
 
+There is now also an embeddable provider layer in
+[server/provider.js](/home/kelly-musk/agentpay-server/server/provider.js)
+that lets other developers mount AgentPay routes into their own Express apps.
+Intent persistence is now pluggable through
+[server/intents.js](/home/kelly-musk/agentpay-server/server/intents.js).
+
 The gateway exposes paywalled routes, returns `402` payment challenges, verifies
 incoming Stellar payments, executes business logic, and logs usage.
 
@@ -20,15 +26,20 @@ retries with `x-payment`, and prints the final API response.
 
 ### Root
 
+- [index.js](/home/kelly-musk/agentpay-server/index.js): root SDK entrypoint for implementers.
 - [server.js](/home/kelly-musk/agentpay-server/server.js): thin root entrypoint that boots the server folder.
 - [client.js](/home/kelly-musk/agentpay-server/client.js): thin root entrypoint that boots the client folder.
 - [package.json](/home/kelly-musk/agentpay-server/package.json): scripts, metadata, and dependencies.
 - [README.md](/home/kelly-musk/agentpay-server/README.md): product-facing project overview.
+- [examples/express-provider.js](/home/kelly-musk/agentpay-server/examples/express-provider.js): copyable Express integration example.
 
 ### Server
 
+- [server/index.js](/home/kelly-musk/agentpay-server/server/index.js): server-focused SDK entrypoint.
 - [server/server.js](/home/kelly-musk/agentpay-server/server/server.js): Express app setup, routes, and payment enforcement.
+- [server/provider.js](/home/kelly-musk/agentpay-server/server/provider.js): reusable provider integration layer for implementers.
 - [server/payments.js](/home/kelly-musk/agentpay-server/server/payments.js): x402 requirement generation, verification, settlement, and capabilities.
+- [server/intents.js](/home/kelly-musk/agentpay-server/server/intents.js): intent store abstractions, file storage, and in-memory storage.
 - [server/pricing.js](/home/kelly-musk/agentpay-server/server/pricing.js): endpoint catalog and dynamic pricing rules.
 - [server/logger.js](/home/kelly-musk/agentpay-server/server/logger.js): request logging and `/stats` aggregation.
 - [server/handlers/shared.js](/home/kelly-musk/agentpay-server/server/handlers/shared.js): shared business logic and Rust forwarding helper.
@@ -38,6 +49,7 @@ retries with `x-payment`, and prints the final API response.
 
 ### Client
 
+- [client/index.js](/home/kelly-musk/agentpay-server/client/index.js): client-focused SDK entrypoint.
 - [client/client.js](/home/kelly-musk/agentpay-server/client/client.js): CLI argument parsing and request orchestration.
 - [client/lib/config.js](/home/kelly-musk/agentpay-server/client/lib/config.js): persistent non-secret CLI config storage.
 - [client/lib/secure-store.js](/home/kelly-musk/agentpay-server/client/lib/secure-store.js): OS keychain storage for wallet secrets.
@@ -74,6 +86,63 @@ Run the gateway:
 
 ```bash
 X402_ASSET=USDC yarn start
+```
+
+Mount AgentPay into another Express app:
+
+```js
+import express from "express";
+import { registerAgentPayRoutes } from "agentpay-gateway";
+```
+
+Import server/client helpers from stable SDK paths:
+
+```js
+import { createPaymentContext } from "agentpay-gateway/server";
+import { payFetch } from "agentpay-gateway/client";
+```
+
+Use the simpler declarative route API:
+
+```js
+registerAgentPayRoutes(app, {
+  config,
+  routes: [
+    {
+      method: "POST",
+      path: "/summarize",
+      description: "Summarize text",
+      priceUsd: "0.05",
+      handler: async (gatewayConfig, query) => ({ summary: query }),
+    },
+  ],
+});
+```
+
+Inject a custom intent store:
+
+```js
+import { createIntentStore, createMemoryIntentStorage } from "agentpay-gateway";
+```
+
+Or select SQLite-backed intent storage:
+
+```js
+registerAgentPayRoutes(app, {
+  config,
+  storage: {
+    intents: {
+      type: "sqlite",
+      filename: "./agentpay-intents.db",
+    },
+    usage: {
+      type: "sqlite",
+      filename: "./agentpay-usage.db",
+    },
+  },
+  endpoints,
+  handlers,
+});
 ```
 
 Run the CLI against the gateway:
@@ -140,13 +209,22 @@ yarn smoke
 
 To add a new paid endpoint:
 
-1. add its metadata in [server/pricing.js](/home/kelly-musk/agentpay-server/server/pricing.js)
-2. create its handler in [server/handlers/](/home/kelly-musk/agentpay-server/server/handlers)
-3. register it in [server/server.js](/home/kelly-musk/agentpay-server/server/server.js)
+1. add a route object to `routes`, or add metadata to your endpoint catalog
+2. provide its handler either inline in `routes` or via the provider `handlers` map
+3. register routes through [server/provider.js](/home/kelly-musk/agentpay-server/server/provider.js)
 
 To change how payment verification works:
 
 - start in [server/payments.js](/home/kelly-musk/agentpay-server/server/payments.js)
+
+To change how implementers embed AgentPay:
+
+- start in [server/provider.js](/home/kelly-musk/agentpay-server/server/provider.js)
+
+To change persistence or storage behavior:
+
+- start in [server/intents.js](/home/kelly-musk/agentpay-server/server/intents.js)
+- usage/analytics storage also lives in [server/logger.js](/home/kelly-musk/agentpay-server/server/logger.js)
 
 To change the CLI signing flow:
 
@@ -173,6 +251,17 @@ To swap local fallback logic for Rust-backed execution:
 4. `server/payments.js` verifies the payload.
 5. A handler in `server/handlers/` runs.
 6. `server/logger.js` records the paid request.
+
+For intent-based execution:
+
+1. `POST /intents` creates a payable intent.
+2. `POST /intents/:intentId/execute` is payment-gated.
+3. [server/intents.js](/home/kelly-musk/agentpay-server/server/intents.js) records `pending`, `paid`, `executed`, or `failed`.
+
+By default the standalone gateway uses file-backed intent storage, but
+implementers can inject their own in-memory or external storage through the
+provider layer.
+The same pattern now applies to usage and revenue logging.
 
 ## Public Route Map
 

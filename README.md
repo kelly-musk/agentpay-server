@@ -41,6 +41,17 @@ That makes it useful for many downstream services, including:
 - tool execution
 - future backend microservices
 
+## Integration Modes
+
+AgentPay can now be used in two ways:
+
+1. as a standalone hosted gateway
+2. as an embeddable provider layer inside another Express service
+
+That means implementers can either deploy AgentPay directly or mount its routes
+inside their own app and protect their own paid endpoints with Stellar-backed
+payment verification.
+
 ## What It Does
 
 For protected routes, the gateway:
@@ -72,6 +83,143 @@ Public AgentPay Gateway
 Backend Handler / Forwarded Service
         ↓
 Structured Response + Payment Metadata + Logging
+```
+
+## Provider Integration
+
+The package now exposes a reusable provider surface for implementers:
+
+- `createAgentPayApp(...)`
+- `createAgentPayProvider(...)`
+- `registerAgentPayRoutes(app, ...)`
+- `createIntentStore(...)`
+- `createMemoryIntentStorage(...)`
+- `createFileIntentStorage(...)`
+- `createSqliteIntentStorage(...)`
+- `createUsageStore(...)`
+- `createMemoryUsageStorage(...)`
+- `createFileUsageStorage(...)`
+- `createSqliteUsageStorage(...)`
+
+Stable import paths:
+
+```js
+import { registerAgentPayRoutes } from "agentpay-gateway";
+import { createPaymentContext } from "agentpay-gateway/server";
+import { getPriceUsd } from "agentpay-gateway/pricing";
+import { payFetch } from "agentpay-gateway/client";
+```
+
+The simplest integration path is now a declarative protected-route array:
+
+```js
+import express from "express";
+import { registerAgentPayRoutes } from "agentpay-gateway";
+
+const app = express();
+
+registerAgentPayRoutes(app, {
+  config,
+  routes: [
+    {
+      method: "POST",
+      path: "/summarize",
+      description: "Summarize text",
+      priceUsd: "0.05",
+      handler: async (gatewayConfig, query) => ({
+        summary: `Summarized: ${query}`,
+        source: "route-definition",
+      }),
+    },
+  ],
+});
+```
+
+If you want more control, you can still provide `endpoints` and `handlers`
+separately.
+
+A copyable end-to-end provider example lives at
+[examples/express-provider.js](/home/kelly-musk/agentpay-server/examples/express-provider.js).
+
+Example:
+
+```js
+import express from "express";
+import { registerAgentPayRoutes } from "agentpay-gateway";
+
+const app = express();
+
+registerAgentPayRoutes(app, {
+  config: {
+    port: 3000,
+    gatewayUrl: "http://localhost:3000",
+    rustServiceUrl: "",
+    facilitatorUrl: "https://facilitator.stellar-x402.org",
+    network: "stellar-testnet",
+    walletAddress: process.env.WALLET_ADDRESS,
+    asset: {
+      address: "native",
+      symbol: "XLM",
+      decimals: 7,
+      displayName: "Stellar Lumens",
+    },
+  },
+  endpoints: {
+    summarize: {
+      id: "summarize",
+      path: "/summarize",
+      description: "Summarize text",
+      basePriceUsd: "0.05",
+    },
+  },
+  handlers: {
+    summarize: async (config, query) => ({
+      summary: `Summarized: ${query}`,
+      source: "custom-handler",
+    }),
+  },
+});
+
+app.listen(3000);
+```
+
+Implementers can also inject their own persistence:
+
+```js
+import {
+  createIntentStore,
+  createMemoryIntentStorage,
+  registerAgentPayRoutes,
+} from "agentpay-gateway";
+
+const intentStore = createIntentStore(createMemoryIntentStorage());
+
+registerAgentPayRoutes(app, {
+  config,
+  intentStore,
+  endpoints,
+  handlers,
+});
+```
+
+Or choose storage by type through provider config:
+
+```js
+registerAgentPayRoutes(app, {
+  config,
+  storage: {
+    intents: {
+      type: "sqlite",
+      filename: "./agentpay-intents.db",
+    },
+    usage: {
+      type: "sqlite",
+      filename: "./agentpay-usage.db",
+    },
+  },
+  endpoints,
+  handlers,
+});
 ```
 
 ## Current Working Paths
@@ -223,6 +371,23 @@ yarn check
 yarn build
 yarn smoke
 ```
+
+## Package Exports
+
+Implementers can import:
+
+- `agentpay-gateway`
+- `agentpay-gateway/server`
+- `agentpay-gateway/payments`
+- `agentpay-gateway/pricing`
+- `agentpay-gateway/client`
+
+The provider surface is aimed at implementers who want to:
+
+- mount AgentPay routes inside their own Express service
+- bring their own endpoint catalog and handlers
+- inject durable intent and usage storage
+- inject their own intent storage and persistence strategy
 
 ## Public API
 
@@ -383,3 +548,4 @@ but to provide a public-facing payment gateway for agent-native APIs on Stellar.
 - OS-keystore-first CLI onboarding as the default product experience
 - richer discovery and capabilities metadata
 - backend integrations beyond the current local fallback flow
+- more durable provider-side storage for intents and execution state

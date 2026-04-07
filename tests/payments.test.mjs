@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createPaymentContext } from "../server/payments.js";
+import { createPaymentContext, validateGatewayConfig } from "../server/payments.js";
 
 const config = {
   port: 3000,
@@ -60,4 +60,15 @@ test("builds discovery resources for agents", () => {
   assert.equal(resources.length, 3);
   assert.equal(resources[0].resource, "http://localhost:3000/ai");
   assert.equal(resources[0].accepts[0].scheme, "exact");
+});
+
+test("validates gateway config before use", () => {
+  assert.throws(
+    () => validateGatewayConfig({ ...config, walletAddress: "not-a-wallet" }),
+    /Invalid walletAddress/,
+  );
+  assert.throws(
+    () => validateGatewayConfig({ ...config, gatewayUrl: "not-a-url" }),
+    /Invalid gatewayUrl/,
+  );
 });

@@ -13,7 +13,12 @@ import {
   decodePaymentHeader,
   useFacilitator,
 } from "x402-stellar";
-import { getEndpointConfig, getPriceUsd, listEndpoints } from "./pricing.js";
+import {
+  createEndpointCatalog,
+  getEndpointConfigFromCatalog,
+  getPriceUsdFromCatalog,
+  listEndpointsFromCatalog,
+} from "./pricing.js";
 
 const DISCOVERY_UPDATED_AT = Date.now();
 
@@ -59,6 +64,81 @@ function normalizeAssetConfig(network, rawAsset) {
   };
 }
 
+function assertValidUrl(name, value) {
+  try {
+    return new URL(value).toString().replace(/\/$/, "");
+  } catch {
+    throw new Error(`Invalid ${name}: expected an absolute URL`);
+  }
+}
+
+function validateAssetConfig(asset) {
+  if (!asset || typeof asset !== "object") {
+    throw new Error("Invalid asset config: expected an object");
+  }
+
+  if (!asset.address || typeof asset.address !== "string") {
+    throw new Error("Invalid asset config: missing address");
+  }
+
+  if (!asset.symbol || typeof asset.symbol !== "string") {
+    throw new Error("Invalid asset config: missing symbol");
+  }
+
+  if (!Number.isInteger(asset.decimals) || asset.decimals < 0 || asset.decimals > 18) {
+    throw new Error("Invalid asset config: decimals must be an integer between 0 and 18");
+  }
+
+  if (!asset.displayName || typeof asset.displayName !== "string") {
+    throw new Error("Invalid asset config: missing displayName");
+  }
+}
+
+export function validateGatewayConfig(config) {
+  if (!config || typeof config !== "object") {
+    throw new Error("Invalid gateway config: expected an object");
+  }
+
+  const network = normalizeNetwork(config.network);
+
+  if (!STELLAR_NETWORKS[network]) {
+    throw new Error(`Unsupported network: ${network}`);
+  }
+
+  if (!config.walletAddress) {
+    throw new Error("Missing required walletAddress");
+  }
+
+  if (!StrKey.isValidEd25519PublicKey(config.walletAddress)) {
+    throw new Error("Invalid walletAddress: expected a Stellar public key");
+  }
+
+  const port = Number.parseInt(String(config.port ?? "3000"), 10);
+
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    throw new Error("Invalid port: expected an integer between 1 and 65535");
+  }
+
+  const gatewayUrl = assertValidUrl(
+    "gatewayUrl",
+    config.gatewayUrl || "http://localhost:3000",
+  );
+  const facilitatorUrl = assertValidUrl(
+    "facilitatorUrl",
+    config.facilitatorUrl || "https://facilitator.stellar-x402.org",
+  );
+
+  validateAssetConfig(config.asset);
+
+  return {
+    ...config,
+    port,
+    network,
+    gatewayUrl,
+    facilitatorUrl,
+  };
+}
+
 function toBaseUnits(displayAmount, decimals) {
   const [wholePart, fractionPart = ""] = displayAmount.split(".");
   const paddedFraction = (fractionPart + "0".repeat(decimals)).slice(0, decimals);
@@ -96,15 +176,7 @@ export function loadGatewayConfig() {
   const asset = normalizeAssetConfig(network, process.env.X402_ASSET);
   const walletAddress = process.env.WALLET_ADDRESS;
 
-  if (!walletAddress) {
-    throw new Error("Missing required environment variable WALLET_ADDRESS");
-  }
-
-  if (!STELLAR_NETWORKS[network]) {
-    throw new Error(`Unsupported network: ${network}`);
-  }
-
-  return {
+  return validateGatewayConfig({
     port: Number.parseInt(process.env.PORT || "3000", 10),
     gatewayUrl: process.env.GATEWAY_URL || "http://localhost:3000",
     rustServiceUrl: process.env.RUST_SERVICE_URL || "",
@@ -113,12 +185,14 @@ export function loadGatewayConfig() {
     network,
     walletAddress,
     asset,
-  };
+  });
 }
 
-export function createPaymentContext(config) {
+export function createPaymentContext(rawConfig) {
+  const config = validateGatewayConfig(rawConfig);
   const facilitator = useFacilitator({ url: config.facilitatorUrl });
   const seenNonces = new Set();
+  const endpointCatalog = config.endpointCatalog || createEndpointCatalog();
 
   async function getLatestLedger() {
     const horizonServer = new Horizon.Server(
@@ -489,9 +563,9 @@ export function createPaymentContext(config) {
   }
 
   function buildRequirementsForResource(resourceUrl, endpointId, query = "", options = {}) {
-    const priceUsd = options.priceUsd || getPriceUsd(endpointId, query);
+    const priceUsd = options.priceUsd || getPriceUsdFromCatalog(endpointCatalog, endpointId, query);
     const description =
-      options.description || `AgentPay ${getEndpointConfig(endpointId).description}`;
+      options.description || `AgentPay ${getEndpointConfigFromCatalog(endpointCatalog, endpointId).description}`;
 
     return {
       x402Version: 1,
@@ -530,7 +604,7 @@ export function createPaymentContext(config) {
       facilitator: config.facilitatorUrl,
       walletAddress: config.walletAddress,
       asset: config.asset,
-      endpoints: listEndpoints().map((endpoint) => ({
+      endpoints: listEndpointsFromCatalog(endpointCatalog).map((endpoint) => ({
         id: endpoint.id,
         path: endpoint.path,
         description: endpoint.description,
@@ -540,7 +614,7 @@ export function createPaymentContext(config) {
   }
 
   function getDiscoveryResources() {
-    return listEndpoints().map((endpoint) => ({
+    return listEndpointsFromCatalog(endpointCatalog).map((endpoint) => ({
       resource: `${config.gatewayUrl}${endpoint.path}`,
       type: "http",
       x402Version: 1,

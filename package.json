@@ -3,6 +3,14 @@
   "version": "1.0.0",
   "description": "Agent-native x402 payment gateway on Stellar",
   "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./server": "./server/index.js",
+    "./payments": "./server/payments.js",
+    "./pricing": "./server/pricing.js",
+    "./client": "./client/index.js"
+  },
   "bin": {
     "agentpay": "./client/client.js"
   },
