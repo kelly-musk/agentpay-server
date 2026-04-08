@@ -97,10 +97,12 @@ The package now exposes a reusable provider surface for implementers:
 - `createIntentStore(...)`
 - `createMemoryIntentStorage(...)`
 - `createFileIntentStorage(...)`
+- `createPostgresIntentStorage(...)`
 - `createSqliteIntentStorage(...)`
 - `createUsageStore(...)`
 - `createMemoryUsageStorage(...)`
 - `createFileUsageStorage(...)`
+- `createPostgresUsageStorage(...)`
 - `createSqliteUsageStorage(...)`
 
 Stable import paths:
@@ -244,6 +246,34 @@ registerAgentPayRoutes(app, {
   handlers,
 });
 ```
+
+For production persistence, select Postgres-backed storage:
+
+```js
+registerAgentPayRoutes(app, {
+  config,
+  storage: {
+    intents: {
+      type: "postgres",
+      connectionString: process.env.DATABASE_URL,
+      schemaName: "public",
+      tableName: "agentpay_intents",
+    },
+    usage: {
+      type: "postgres",
+      connectionString: process.env.DATABASE_URL,
+      schemaName: "public",
+      tableName: "agentpay_usage",
+    },
+  },
+  endpoints,
+  handlers,
+});
+```
+
+The Postgres adapters lazy-load `pg` and auto-create their tables on first use.
+Embedded providers also expose `getReadinessReport()` and `close()` so hosts can
+wire readiness probes and graceful shutdown into their own runtime.
 
 ## Current Working Paths
 
@@ -422,6 +452,11 @@ Service summary and route overview.
 
 Runtime health probe for operators and deployment checks.
 
+### `GET /ready`
+
+Readiness probe that reports provider storage status and returns `503` if a
+configured storage backend is not healthy.
+
 ### `GET /capabilities`
 
 Machine-readable endpoint and payment metadata for agent integrations.
@@ -432,7 +467,7 @@ Discovery endpoint listing monetized resources and their payment requirements.
 
 ### `GET /stats`
 
-Aggregated request and revenue stats from `logs.txt`.
+Aggregated request and revenue stats from the configured usage store.
 
 ### `GET /intents`
 
@@ -527,6 +562,11 @@ yarn cli ai --query "hello agent"
 ```
 
 6. Inspect the returned settlement hash on a Stellar testnet explorer.
+7. Check runtime readiness:
+
+```bash
+curl http://localhost:3000/ready
+```
 
 ## Request Lifecycle
 

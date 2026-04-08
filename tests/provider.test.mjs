@@ -146,14 +146,14 @@ test("supports sqlite intent storage for durable provider state", async () => {
   }
 });
 
-test("supports injected usage storage for implementers", () => {
+test("supports injected usage storage for implementers", async () => {
   const usageStore = createUsageStore(createMemoryUsageStorage());
   const app = createAgentPayApp({
     config,
     usageStore,
   });
 
-  usageStore.logRequest({
+  await usageStore.logRequest({
     endpoint: "ai",
     query: "usage",
     timestamp: new Date().toISOString(),
@@ -166,7 +166,7 @@ test("supports injected usage storage for implementers", () => {
   });
 
   assert.equal(getRoutePaths(app).includes("/stats"), true);
-  assert.equal(usageStore.readStats().total_revenue, "0.02 USDC");
+  assert.equal((await usageStore.readStats()).total_revenue, "0.02 USDC");
 });
 
 test("fails fast on invalid provider route and storage config", () => {
@@ -196,4 +196,86 @@ test("fails fast on invalid provider route and storage config", () => {
     }),
     /filename is required/,
   );
+
+  assert.throws(
+    () => validateProviderOptions({
+      config,
+      storage: {
+        usage: {
+          type: "postgres",
+        },
+      },
+    }),
+    /connectionString or client is required/,
+  );
+});
+
+test("exposes readiness and shutdown hooks for provider storage backends", async () => {
+  let intentClosed = false;
+  let usageClosed = false;
+
+  const intentStore = createIntentStore({
+    kind: "custom-intent",
+    create(input) {
+      return {
+        id: "intent_test",
+        status: "pending",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        ...input,
+      };
+    },
+    getById() {
+      return null;
+    },
+    list() {
+      return [];
+    },
+    update() {
+      return null;
+    },
+    async healthCheck() {
+      return {
+        ok: true,
+        status: "ready",
+        kind: "custom-intent",
+      };
+    },
+    async close() {
+      intentClosed = true;
+    },
+  });
+  const usageStore = createUsageStore({
+    kind: "custom-usage",
+    append() {},
+    list() {
+      return [];
+    },
+    async healthCheck() {
+      return {
+        ok: true,
+        status: "ready",
+        kind: "custom-usage",
+      };
+    },
+    async close() {
+      usageClosed = true;
+    },
+  });
+  const provider = createAgentPayProvider({
+    config,
+    intentStore,
+    usageStore,
+  });
+
+  const readiness = await provider.getReadinessReport();
+
+  assert.equal(readiness.ok, true);
+  assert.equal(readiness.checks.intents.kind, "custom-intent");
+  assert.equal(readiness.checks.usage.kind, "custom-usage");
+
+  await provider.close();
+
+  assert.equal(intentClosed, true);
+  assert.equal(usageClosed, true);
 });

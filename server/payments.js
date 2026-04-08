@@ -672,7 +672,7 @@ export function requirePaymentWith(buildRequirements, paymentContext) {
     let requirements;
 
     try {
-      requirements = buildRequirements(req);
+      requirements = await buildRequirements(req);
     } catch (error) {
       const message = String(error.message || error);
       const status = message === "Intent not found" ? 404 : 400;

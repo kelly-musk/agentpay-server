@@ -39,7 +39,7 @@ retries with `x-payment`, and prints the final API response.
 - [server/server.js](/home/kelly-musk/agentpay-server/server/server.js): Express app setup, routes, and payment enforcement.
 - [server/provider.js](/home/kelly-musk/agentpay-server/server/provider.js): reusable provider integration layer for implementers.
 - [server/payments.js](/home/kelly-musk/agentpay-server/server/payments.js): x402 requirement generation, verification, settlement, and capabilities.
-- [server/intents.js](/home/kelly-musk/agentpay-server/server/intents.js): intent store abstractions, file storage, and in-memory storage.
+- [server/intents.js](/home/kelly-musk/agentpay-server/server/intents.js): intent store abstractions and file, SQLite, and Postgres storage adapters.
 - [server/pricing.js](/home/kelly-musk/agentpay-server/server/pricing.js): endpoint catalog and dynamic pricing rules.
 - [server/logger.js](/home/kelly-musk/agentpay-server/server/logger.js): request logging and `/stats` aggregation.
 - [server/handlers/shared.js](/home/kelly-musk/agentpay-server/server/handlers/shared.js): shared business logic and Rust forwarding helper.
@@ -154,6 +154,30 @@ registerAgentPayRoutes(app, {
 });
 ```
 
+Or select Postgres-backed storage for production persistence:
+
+```js
+registerAgentPayRoutes(app, {
+  config,
+  storage: {
+    intents: {
+      type: "postgres",
+      connectionString: process.env.DATABASE_URL,
+      schemaName: "public",
+      tableName: "agentpay_intents",
+    },
+    usage: {
+      type: "postgres",
+      connectionString: process.env.DATABASE_URL,
+      schemaName: "public",
+      tableName: "agentpay_usage",
+    },
+  },
+  endpoints,
+  handlers,
+});
+```
+
 Run the CLI against the gateway:
 
 ```bash
@@ -253,6 +277,8 @@ To swap local fallback logic for Rust-backed execution:
 - `X402_ASSET=native` remains the simplest fallback demo path.
 - gateway and provider startup now fail fast on invalid wallet addresses, URLs,
   route methods, route pricing, and malformed storage configs.
+- Postgres-backed storage requires the `pg` runtime dependency and a valid
+  `connectionString` if you are not injecting your own query client.
 
 ## Request Lifecycle
 
@@ -270,14 +296,15 @@ For intent-based execution:
 3. [server/intents.js](/home/kelly-musk/agentpay-server/server/intents.js) records `pending`, `paid`, `executed`, or `failed`.
 
 By default the standalone gateway uses file-backed intent storage, but
-implementers can inject their own in-memory or external storage through the
-provider layer.
-The same pattern now applies to usage and revenue logging.
+implementers can inject their own in-memory, SQLite, or Postgres-backed storage
+through the provider layer. The same pattern now applies to usage and revenue
+logging.
 
 ## Public Route Map
 
 - `/` service summary
 - `/health` runtime health probe
+- `/ready` readiness probe with storage backend status
 - `/capabilities` simplified machine-readable integration contract
 - `/discovery/resources` x402-style resource discovery
 - `/stats` usage and revenue summary

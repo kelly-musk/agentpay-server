@@ -227,6 +227,21 @@ async function runDoctor() {
   }
 
   try {
+    const readiness = await fetchJson(`${effective.gatewayUrl}/ready`);
+    report.readiness = {
+      reachable: readiness.ok,
+      status: readiness.status,
+      ok: readiness.data?.ok ?? false,
+      checks: readiness.data?.checks || null,
+    };
+  } catch (error) {
+    report.readiness = {
+      reachable: false,
+      error: String(error.message || error),
+    };
+  }
+
+  try {
     const capabilities = await fetchJson(`${effective.gatewayUrl}/capabilities`);
     report.capabilities = {
       reachable: capabilities.ok,

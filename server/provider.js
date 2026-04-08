@@ -7,14 +7,17 @@ import {
   createFileIntentStorage,
   createMemoryIntentStorage,
   createIntentStore,
+  createPostgresIntentStorage,
   createSqliteIntentStorage,
 } from "./intents.js";
 import {
   createFileUsageStorage,
   createMemoryUsageStorage,
+  createPostgresUsageStorage,
   createSqliteUsageStorage,
   createUsageStore,
 } from "./logger.js";
+import { assertValidPostgresIdentifier } from "./postgres.js";
 import {
   createPaymentContext,
   loadGatewayConfig,
@@ -104,12 +107,30 @@ function validateStorageConfig(name, storageConfig) {
     throw new Error(`Invalid ${name} storage config: missing type`);
   }
 
-  if (!["memory", "file", "sqlite"].includes(storageConfig.type)) {
+  if (!["memory", "file", "sqlite", "postgres"].includes(storageConfig.type)) {
     throw new Error(`Unsupported ${name} storage type: ${storageConfig.type}`);
   }
 
   if ((storageConfig.type === "file" || storageConfig.type === "sqlite") && !storageConfig.filename) {
     throw new Error(`Invalid ${name} storage config: filename is required for ${storageConfig.type}`);
+  }
+
+  if (
+    storageConfig.type === "postgres" &&
+    !storageConfig.connectionString &&
+    !storageConfig.client
+  ) {
+    throw new Error(
+      `Invalid ${name} storage config: connectionString or client is required for postgres`,
+    );
+  }
+
+  if (storageConfig.schemaName) {
+    assertValidPostgresIdentifier(`${name} storage schemaName`, storageConfig.schemaName);
+  }
+
+  if (storageConfig.tableName) {
+    assertValidPostgresIdentifier(`${name} storage tableName`, storageConfig.tableName);
   }
 }
 
@@ -198,6 +219,10 @@ function resolveIntentStore(options) {
     return createIntentStore(createSqliteIntentStorage(storageConfig.filename));
   }
 
+  if (storageConfig.type === "postgres") {
+    return createIntentStore(createPostgresIntentStorage(storageConfig));
+  }
+
   if (storageConfig.type === "file") {
     return createIntentStore(createFileIntentStorage(storageConfig.filename));
   }
@@ -227,6 +252,10 @@ function resolveUsageStore(options) {
 
   if (storageConfig.type === "sqlite") {
     return createUsageStore(createSqliteUsageStorage(storageConfig.filename));
+  }
+
+  if (storageConfig.type === "postgres") {
+    return createUsageStore(createPostgresUsageStorage(storageConfig));
   }
 
   if (storageConfig.type === "file") {
@@ -260,6 +289,11 @@ function registerPublicRoutes(app, provider) {
     });
   });
 
+  app.get("/ready", async (req, res) => {
+    const readiness = await provider.getReadinessReport();
+    res.status(readiness.ok ? 200 : 503).json(readiness);
+  });
+
   app.get("/capabilities", (req, res) => {
     res.json(paymentContext.getCapabilities());
   });
@@ -290,18 +324,18 @@ function registerPublicRoutes(app, provider) {
     });
   });
 
-  app.get("/stats", (req, res) => {
-    res.json(usageStore.readStats());
+  app.get("/stats", async (req, res) => {
+    res.json(await usageStore.readStats());
   });
 
-  app.get("/intents", (req, res) => {
+  app.get("/intents", async (req, res) => {
     const limit = req.query.limit ? Number.parseInt(String(req.query.limit), 10) : 50;
     res.json({
-      items: intentStore.listIntents(Number.isNaN(limit) ? 50 : limit),
+      items: await intentStore.listIntents(Number.isNaN(limit) ? 50 : limit),
     });
   });
 
-  app.post("/intents", (req, res) => {
+  app.post("/intents", async (req, res) => {
     try {
       const endpoint = String(req.body.endpoint || "").trim();
       const query = String(req.body.query || "").trim();
@@ -313,7 +347,7 @@ function registerPublicRoutes(app, provider) {
       getEndpointConfigFromCatalog(endpointCatalog, endpoint);
 
       const amount = getPriceUsdFromCatalog(endpointCatalog, endpoint, query);
-      const intent = intentStore.createIntent({
+      const intent = await intentStore.createIntent({
         endpoint,
         query,
         amount,
@@ -347,8 +381,8 @@ function registerPublicRoutes(app, provider) {
     }
   });
 
-  app.get("/intents/:intentId", (req, res) => {
-    const intent = intentStore.getIntentById(req.params.intentId);
+  app.get("/intents/:intentId", async (req, res) => {
+    const intent = await intentStore.getIntentById(req.params.intentId);
 
     if (!intent) {
       return res.status(404).json({ error: "Intent not found" });
@@ -372,8 +406,8 @@ function registerIntentExecutionRoutes(app, provider) {
 
   app.post(
     "/intents/:intentId/execute",
-    requirePaymentWith((req) => {
-      const intent = intentStore.getIntentById(req.params.intentId);
+    requirePaymentWith(async (req) => {
+      const intent = await intentStore.getIntentById(req.params.intentId);
 
       if (!intent) {
         throw new Error("Intent not found");
@@ -394,7 +428,7 @@ function registerIntentExecutionRoutes(app, provider) {
       );
     }, paymentContext),
     async (req, res) => {
-      const intent = intentStore.getIntentById(req.params.intentId);
+      const intent = await intentStore.getIntentById(req.params.intentId);
 
       if (!intent) {
         return res.status(404).json({ error: "Intent not found" });
@@ -411,7 +445,7 @@ function registerIntentExecutionRoutes(app, provider) {
       executingIntents.add(intent.id);
 
       try {
-        intentStore.updateIntent(intent.id, {
+        await intentStore.updateIntent(intent.id, {
           status: "paid",
           payment: {
             network: config.network,
@@ -440,14 +474,14 @@ function registerIntentExecutionRoutes(app, provider) {
           console.error("Settlement failed:", error.message);
         }
 
-        const finalizedIntent = intentStore.updateIntent(intent.id, {
+        const finalizedIntent = await intentStore.updateIntent(intent.id, {
           status: "executed",
           settlement,
           result,
           executedAt: new Date().toISOString(),
         });
 
-        usageStore.logRequest({
+        await usageStore.logRequest({
           endpoint: intent.endpoint,
           query: intent.query,
           timestamp: new Date().toISOString(),
@@ -474,7 +508,7 @@ function registerIntentExecutionRoutes(app, provider) {
           result,
         });
       } catch (error) {
-        intentStore.updateIntent(intent.id, {
+        await intentStore.updateIntent(intent.id, {
           status: "failed",
           error: error.message,
         });
@@ -520,7 +554,7 @@ function registerDirectEndpointRoutes(app, provider) {
           console.error("Settlement failed:", error.message);
         }
 
-        usageStore.logRequest({
+        await usageStore.logRequest({
           endpoint: endpoint.id,
           query,
           timestamp: new Date().toISOString(),
@@ -573,6 +607,55 @@ export function createAgentPayProvider(options = {}) {
     paymentContext,
     executingIntents: new Set(),
     protectedRoutes,
+    async getReadinessReport() {
+      const checks = {};
+
+      async function runCheck(name, fn) {
+        try {
+          checks[name] = await fn();
+        } catch (error) {
+          checks[name] = {
+            ok: false,
+            status: "error",
+            error: String(error.message || error),
+          };
+        }
+      }
+
+      await runCheck("payment", async () => ({
+        ok: true,
+        status: "ready",
+        network: config.network,
+        asset: config.asset.symbol,
+      }));
+      await runCheck("intents", () => intentStore.healthCheck());
+      await runCheck("usage", () => usageStore.healthCheck());
+
+      const ok = Object.values(checks).every((check) => check?.ok !== false);
+
+      return {
+        ok,
+        service: "agentpay-gateway",
+        network: config.network,
+        asset: config.asset.symbol,
+        checks,
+      };
+    },
+    async close() {
+      const results = await Promise.allSettled([
+        intentStore.close?.(),
+        usageStore.close?.(),
+      ]);
+
+      const rejected = results.filter((result) => result.status === "rejected");
+      if (rejected.length > 0) {
+        throw new Error(
+          `Provider shutdown failed: ${rejected
+            .map((result) => result.reason?.message || String(result.reason))
+            .join("; ")}`,
+        );
+      }
+    },
   };
 
   return {
@@ -596,7 +679,8 @@ export function createAgentPayApp(options = {}) {
   const app = express();
   app.use(express.json());
   app.set("trust proxy", true);
-  registerAgentPayRoutes(app, options);
+  const provider = registerAgentPayRoutes(app, options);
+  app.locals.agentpayProvider = provider;
   return app;
 }
 
@@ -604,11 +688,13 @@ export {
   createFileIntentStorage,
   createMemoryIntentStorage,
   createIntentStore,
+  createPostgresIntentStorage,
   createSqliteIntentStorage,
 } from "./intents.js";
 export {
   createFileUsageStorage,
   createMemoryUsageStorage,
+  createPostgresUsageStorage,
   createSqliteUsageStorage,
   createUsageStore,
 } from "./logger.js";

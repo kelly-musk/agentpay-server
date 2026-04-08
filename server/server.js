@@ -8,12 +8,29 @@ export function createServerApp(config = loadGatewayConfig()) {
 
 export function startServer(config = loadGatewayConfig()) {
   const app = createServerApp(config);
+  const provider = app.locals.agentpayProvider;
   const server = app.listen(config.port, () => {
     console.log(`AgentPay Gateway running on http://localhost:${config.port}`);
   });
+  let shuttingDown = false;
 
-  function shutdown() {
-    server.close(() => process.exit(0));
+  async function shutdown() {
+    if (shuttingDown) {
+      return;
+    }
+
+    shuttingDown = true;
+    server.close(async () => {
+      try {
+        if (provider?.close) {
+          await provider.close();
+        }
+      } catch (error) {
+        console.error("AgentPay shutdown failed:", error.message);
+      } finally {
+        process.exit(0);
+      }
+    });
   }
 
   process.on("SIGINT", shutdown);

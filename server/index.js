@@ -6,9 +6,11 @@ export {
   createFileIntentStorage,
   createMemoryIntentStorage,
   createIntentStore,
+  createPostgresIntentStorage,
   createSqliteIntentStorage,
   createFileUsageStorage,
   createMemoryUsageStorage,
+  createPostgresUsageStorage,
   createSqliteUsageStorage,
   createUsageStore,
 } from "./provider.js";

@@ -30,6 +30,7 @@ test("registers the public gateway routes", () => {
   assert.deepEqual(routePaths, [
     "/",
     "/health",
+    "/ready",
     "/capabilities",
     "/discovery/resources",
     "/stats",
@@ -41,4 +42,6 @@ test("registers the public gateway routes", () => {
     "/data",
     "/compute",
   ]);
+  assert.equal(typeof app.locals.agentpayProvider?.getReadinessReport, "function");
+  assert.equal(typeof app.locals.agentpayProvider?.close, "function");
 });

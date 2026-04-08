@@ -9,10 +9,10 @@ import {
   createUsageStore,
 } from "../server/logger.js";
 
-test("aggregates usage stats from in-memory storage", () => {
+test("aggregates usage stats from in-memory storage", async () => {
   const usageStore = createUsageStore(createMemoryUsageStorage());
 
-  usageStore.logRequest({
+  await usageStore.logRequest({
     endpoint: "ai",
     query: "hello",
     timestamp: new Date().toISOString(),
@@ -24,7 +24,7 @@ test("aggregates usage stats from in-memory storage", () => {
     },
   });
 
-  usageStore.logRequest({
+  await usageStore.logRequest({
     endpoint: "data",
     query: "facts",
     timestamp: new Date().toISOString(),
@@ -36,7 +36,7 @@ test("aggregates usage stats from in-memory storage", () => {
     },
   });
 
-  assert.deepEqual(usageStore.readStats(), {
+  assert.deepEqual(await usageStore.readStats(), {
     total_requests: 2,
     total_revenue: "0.03 USDC",
   });
@@ -49,7 +49,7 @@ test("supports sqlite-backed usage storage", async () => {
   try {
     const usageStore = createUsageStore(createSqliteUsageStorage(sqliteFile));
 
-    usageStore.logRequest({
+    await usageStore.logRequest({
       endpoint: "compute",
       query: "heavy",
       timestamp: new Date().toISOString(),
@@ -63,8 +63,8 @@ test("supports sqlite-backed usage storage", async () => {
     });
 
     assert.equal(usageStore.storage.kind, "sqlite");
-    assert.equal(usageStore.listLogs().length, 1);
-    assert.equal(usageStore.readStats().total_revenue, "0.03 XLM");
+    assert.equal((await usageStore.listLogs()).length, 1);
+    assert.equal((await usageStore.readStats()).total_revenue, "0.03 XLM");
   } finally {
     await rm(tempRoot, { recursive: true, force: true });
   }

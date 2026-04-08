@@ -6,6 +6,8 @@ test("root package entry exports provider helpers", async () => {
 
   assert.equal(typeof sdk.registerAgentPayRoutes, "function");
   assert.equal(typeof sdk.createAgentPayProvider, "function");
+  assert.equal(typeof sdk.createPostgresIntentStorage, "function");
+  assert.equal(typeof sdk.createPostgresUsageStorage, "function");
   assert.equal(typeof sdk.createSqliteIntentStorage, "function");
   assert.equal(typeof sdk.createSqliteUsageStorage, "function");
 });
@@ -15,6 +17,8 @@ test("server entry exports provider and payment helpers", async () => {
 
   assert.equal(typeof serverSdk.registerAgentPayRoutes, "function");
   assert.equal(typeof serverSdk.createPaymentContext, "function");
+  assert.equal(typeof serverSdk.validateProviderOptions, "function");
+  assert.equal(typeof serverSdk.validateGatewayConfig, "function");
   assert.equal(typeof serverSdk.requirePaymentWith, "function");
 });
 
