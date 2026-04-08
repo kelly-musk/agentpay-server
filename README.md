@@ -292,6 +292,53 @@ registerAgentPayRoutes(app, {
 });
 ```
 
+Routes and endpoints can also describe themselves as real paid agent services:
+
+```js
+registerAgentPayRoutes(app, {
+  config,
+  routes: [
+    {
+      method: "POST",
+      path: "/search",
+      description: "Paid search for agent workflows",
+      priceUsd: "0.05",
+      category: "search-api",
+      billingUnit: "query",
+      audience: ["agents", "developers"],
+      tags: ["search", "retrieval", "web"],
+      useCases: ["research agents", "web grounding"],
+      inputSchema: {
+        type: "object",
+        properties: {
+          query: { type: "string" },
+        },
+        required: ["query"],
+      },
+      outputSchema: {
+        type: "object",
+        properties: {
+          success: { type: "boolean" },
+          result: { type: "array" },
+        },
+        required: ["success", "result"],
+      },
+      handler: async (gatewayConfig, query) => ({
+        result: [{ title: `Search result for ${query}` }],
+      }),
+    },
+  ],
+});
+```
+
+That metadata is exposed through `/capabilities`, `/discovery/resources`, and
+the `402` payment requirements so agents can understand:
+
+- what kind of service the route provides
+- who it is meant for
+- how it is billed
+- what request and response shape to expect
+
 The same hooks also apply to the intent lifecycle:
 
 - `POST /intents` evaluates pricing, paywall, and payment metadata policies
@@ -347,6 +394,15 @@ separately.
 
 A copyable end-to-end provider example lives at
 [examples/express-provider.js](/home/kelly-musk/agentpay-server/examples/express-provider.js).
+
+A more product-shaped paid-agent-API example lives at
+[examples/paid-search-provider.js](/home/kelly-musk/agentpay-server/examples/paid-search-provider.js).
+It shows how to expose a paid search endpoint with:
+
+- service metadata for agents and developers
+- per-query billing
+- dynamic pricing by query complexity
+- input/output schemas in discovery and `402` responses
 
 Example:
 

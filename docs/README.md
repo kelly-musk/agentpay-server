@@ -32,6 +32,7 @@ retries with `x-payment`, and prints the final API response.
 - [package.json](/home/kelly-musk/agentpay-server/package.json): scripts, metadata, and dependencies.
 - [README.md](/home/kelly-musk/agentpay-server/README.md): product-facing project overview.
 - [examples/express-provider.js](/home/kelly-musk/agentpay-server/examples/express-provider.js): copyable Express integration example.
+- [examples/paid-search-provider.js](/home/kelly-musk/agentpay-server/examples/paid-search-provider.js): paid-agent-API template for a search service.
 
 ### Server
 

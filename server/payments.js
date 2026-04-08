@@ -511,6 +511,19 @@ function buildOutputSchema(assetSymbol) {
   };
 }
 
+function buildEndpointServiceMetadata(endpoint) {
+  return {
+    category: endpoint.category || "general",
+    billingUnit: endpoint.billingUnit || "request",
+    audience: Array.isArray(endpoint.audience) ? endpoint.audience : ["agents", "developers"],
+    tags: Array.isArray(endpoint.tags) ? endpoint.tags : [],
+    useCases: Array.isArray(endpoint.useCases) ? endpoint.useCases : [],
+    examples: Array.isArray(endpoint.examples) ? endpoint.examples : [],
+    inputSchema: endpoint.inputSchema || null,
+    outputSchema: endpoint.outputSchema || null,
+  };
+}
+
 export function loadGatewayConfig() {
   const rawNetwork = process.env.X402_NETWORK;
   const network = normalizeNetwork(rawNetwork);
@@ -984,8 +997,13 @@ export function createPaymentContext(rawConfig) {
 
   function buildRequirementsForResource(resourceUrl, endpointId, query = "", options = {}) {
     const priceUsd = options.priceUsd || getPriceUsdFromCatalog(endpointCatalog, endpointId, query);
+    const endpoint = getEndpointConfigFromCatalog(endpointCatalog, endpointId);
     const description =
-      options.description || `AgentPay ${getEndpointConfigFromCatalog(endpointCatalog, endpointId).description}`;
+      options.description || `AgentPay ${endpoint.description}`;
+    const outputSchema = options.outputSchema
+      || endpoint.outputSchema
+      || buildOutputSchema(config.asset.symbol);
+    const service = buildEndpointServiceMetadata(endpoint);
 
     return {
       x402Version: 1,
@@ -995,7 +1013,7 @@ export function createPaymentContext(rawConfig) {
       resource: resourceUrl,
       description,
       mimeType: "application/json",
-      outputSchema: buildOutputSchema(config.asset.symbol),
+      outputSchema,
       payTo: config.walletAddress,
       maxTimeoutSeconds: 60,
       asset: config.asset.address,
@@ -1004,6 +1022,10 @@ export function createPaymentContext(rawConfig) {
         pricingModel: "dynamic",
         queryLength: query.length,
         priceUsd,
+        category: service.category,
+        billingUnit: service.billingUnit,
+        audience: service.audience,
+        tags: service.tags,
         ...(options.extra || {}),
       },
     };
@@ -1027,8 +1049,10 @@ export function createPaymentContext(rawConfig) {
       endpoints: listEndpointsFromCatalog(endpointCatalog).map((endpoint) => ({
         id: endpoint.id,
         path: endpoint.path,
+        method: endpoint.method,
         description: endpoint.description,
         base_price: endpoint.basePriceUsd,
+        service: buildEndpointServiceMetadata(endpoint),
       })),
     };
   }
@@ -1044,8 +1068,10 @@ export function createPaymentContext(rawConfig) {
       lastUpdated: DISCOVERY_UPDATED_AT,
       metadata: {
         endpoint: endpoint.id,
+        method: endpoint.method,
         description: endpoint.description,
         pricingModel: "dynamic",
+        service: buildEndpointServiceMetadata(endpoint),
       },
     }));
   }

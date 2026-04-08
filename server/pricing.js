@@ -4,27 +4,64 @@ export const DEFAULT_ENDPOINTS = {
     path: "/ai",
     description: "AI-related queries",
     basePriceUsd: "0.02",
+    category: "ai-inference",
+    billingUnit: "request",
+    audience: ["agents", "developers"],
+    tags: ["ai", "inference", "agent-tools"],
+    useCases: ["question-answering", "workflow automation"],
   },
   data: {
     id: "data",
     path: "/data",
     description: "Dataset queries",
     basePriceUsd: "0.01",
+    category: "data-api",
+    billingUnit: "request",
+    audience: ["agents", "developers"],
+    tags: ["data", "search", "retrieval"],
+    useCases: ["research", "retrieval"],
   },
   compute: {
     id: "compute",
     path: "/compute",
     description: "Processing tasks",
     basePriceUsd: "0.03",
+    category: "compute",
+    billingUnit: "request",
+    audience: ["agents", "developers"],
+    tags: ["compute", "automation", "processing"],
+    useCases: ["batch jobs", "tool execution"],
   },
 };
 
+function normalizeStringArray(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => String(entry || "").trim())
+    .filter(Boolean);
+}
+
 function normalizeEndpoint(entry) {
+  const audience = normalizeStringArray(entry.audience);
+
   return {
     ...entry,
     id: entry.id,
     path: entry.path || `/${entry.id}`,
     method: (entry.method || "GET").toUpperCase(),
+    category: entry.category || "general",
+    billingUnit: entry.billingUnit || "request",
+    audience: audience.length > 0
+      ? audience
+      : ["agents", "developers"],
+    tags: normalizeStringArray(entry.tags),
+    useCases: normalizeStringArray(entry.useCases),
+    examples: Array.isArray(entry.examples) ? entry.examples : [],
+    inputSchema: entry.inputSchema || null,
+    outputSchema: entry.outputSchema || null,
   };
 }
 

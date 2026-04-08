@@ -9,6 +9,7 @@ import {
   isSupportedNetworkId,
   validateGatewayConfig,
 } from "../server/payments.js";
+import { createEndpointCatalog } from "../server/pricing.js";
 
 const config = {
   port: 3000,
@@ -68,6 +69,66 @@ test("builds discovery resources for agents", () => {
   assert.equal(resources.length, 3);
   assert.equal(resources[0].resource, "http://localhost:3000/ai");
   assert.equal(resources[0].accepts[0].scheme, "exact");
+});
+
+test("exposes paid agent service metadata and endpoint-specific output schemas", () => {
+  const endpointCatalog = createEndpointCatalog({
+    search: {
+      id: "search",
+      path: "/search",
+      method: "POST",
+      description: "Paid search for agent workflows",
+      basePriceUsd: "0.05",
+      category: "search-api",
+      billingUnit: "query",
+      audience: ["agents", "developers"],
+      tags: ["search", "web", "retrieval"],
+      useCases: ["research agents", "web grounding"],
+      examples: [
+        {
+          query: "latest x402 news",
+        },
+      ],
+      inputSchema: {
+        type: "object",
+        properties: {
+          query: { type: "string" },
+        },
+        required: ["query"],
+      },
+      outputSchema: {
+        type: "object",
+        properties: {
+          success: { type: "boolean" },
+          result: {
+            type: "array",
+          },
+        },
+        required: ["success", "result"],
+      },
+    },
+  });
+  const paymentContext = createPaymentContext({
+    ...config,
+    endpointCatalog,
+  });
+  const capabilities = paymentContext.getCapabilities();
+  const resources = paymentContext.getDiscoveryResources();
+  const requirements = paymentContext.buildRequirementsForResource(
+    "http://localhost:3000/search",
+    "search",
+    "latest x402 news",
+  );
+
+  assert.equal(capabilities.endpoints[0].method, "POST");
+  assert.equal(capabilities.endpoints[0].service.category, "search-api");
+  assert.equal(capabilities.endpoints[0].service.billingUnit, "query");
+  assert.equal(capabilities.endpoints[0].service.tags.includes("search"), true);
+  assert.deepEqual(capabilities.endpoints[0].service.inputSchema.required, ["query"]);
+  assert.equal(resources[0].metadata.service.useCases.includes("research agents"), true);
+  assert.equal(requirements.outputSchema.required.includes("result"), true);
+  assert.equal(requirements.extra.billingUnit, "query");
+  assert.equal(requirements.extra.category, "search-api");
 });
 
 test("validates gateway config before use", () => {
