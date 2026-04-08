@@ -16,6 +16,12 @@ export {
 } from "./provider.js";
 
 export {
+  NETWORK_IDS,
+  SUPPORTED_NETWORK_IDS,
+  CLASSIC_ASSET_IDS,
+  CLASSIC_STELLAR_ASSETS,
+  isSupportedNetworkId,
+  createPaymentReceipt,
   createPaymentContext,
   loadGatewayConfig,
   validateGatewayConfig,

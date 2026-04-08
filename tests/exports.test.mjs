@@ -6,6 +6,14 @@ test("root package entry exports provider helpers", async () => {
 
   assert.equal(typeof sdk.registerAgentPayRoutes, "function");
   assert.equal(typeof sdk.createAgentPayProvider, "function");
+  assert.equal(typeof sdk.NETWORK_IDS, "object");
+  assert.equal(typeof sdk.SUPPORTED_NETWORK_IDS?.length, "number");
+  assert.equal(typeof sdk.CLASSIC_ASSET_IDS, "object");
+  assert.equal(typeof sdk.CLASSIC_STELLAR_ASSETS, "object");
+  assert.equal(typeof sdk.isSupportedNetworkId, "function");
+  assert.equal(sdk.NETWORK_IDS.STELLAR_TESTNET, "stellar-testnet");
+  assert.equal(sdk.NETWORK_IDS.BASE_SEPOLIA, "base-sepolia");
+  assert.equal(sdk.CLASSIC_ASSET_IDS.USDC, "USDC");
   assert.equal(typeof sdk.createPostgresIntentStorage, "function");
   assert.equal(typeof sdk.createPostgresUsageStorage, "function");
   assert.equal(typeof sdk.createSqliteIntentStorage, "function");
@@ -16,6 +24,9 @@ test("server entry exports provider and payment helpers", async () => {
   const serverSdk = await import("../server/index.js");
 
   assert.equal(typeof serverSdk.registerAgentPayRoutes, "function");
+  assert.equal(typeof serverSdk.NETWORK_IDS, "object");
+  assert.equal(typeof serverSdk.CLASSIC_ASSET_IDS, "object");
+  assert.equal(typeof serverSdk.isSupportedNetworkId, "function");
   assert.equal(typeof serverSdk.createPaymentContext, "function");
   assert.equal(typeof serverSdk.validateProviderOptions, "function");
   assert.equal(typeof serverSdk.validateGatewayConfig, "function");

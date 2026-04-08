@@ -25,6 +25,7 @@
     "payer:check": "yarn node scripts/payer-check.mjs",
     "lint": "yarn node scripts/lint.mjs",
     "test": "yarn node --test --test-concurrency=1 tests/*.test.mjs",
+    "test:production": "yarn node --test --test-concurrency=1 production-tests/*.test.mjs",
     "build": "yarn node scripts/build.mjs",
     "check": "yarn lint && yarn test",
     "smoke": "yarn node scripts/smoke.mjs"

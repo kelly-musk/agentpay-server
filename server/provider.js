@@ -3,6 +3,7 @@ import express from "express";
 import { handleAi } from "./handlers/ai.js";
 import { handleCompute } from "./handlers/compute.js";
 import { handleData } from "./handlers/data.js";
+import { createUpstreamHandler, validateUpstreamRouteConfig } from "./handlers/shared.js";
 import {
   createFileIntentStorage,
   createMemoryIntentStorage,
@@ -21,7 +22,6 @@ import { assertValidPostgresIdentifier } from "./postgres.js";
 import {
   createPaymentContext,
   loadGatewayConfig,
-  requirePayment,
   requirePaymentWith,
   validateGatewayConfig,
 } from "./payments.js";
@@ -57,6 +57,97 @@ function assertValidPrice(value) {
   return parsed.toFixed(2);
 }
 
+function assertValidPaymentMetadata(value) {
+  if (value === undefined || value === null) {
+    return {};
+  }
+
+  if (typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Invalid payment metadata: expected an object");
+  }
+
+  return value;
+}
+
+function validateEndpointPolicy(endpoint) {
+  if (endpoint.pricing !== undefined && typeof endpoint.pricing !== "function") {
+    throw new Error(`Invalid pricing policy for endpoint ${endpoint.id}: expected a function`);
+  }
+
+  if (
+    endpoint.shouldRequirePayment !== undefined
+    && typeof endpoint.shouldRequirePayment !== "function"
+    && typeof endpoint.shouldRequirePayment !== "boolean"
+  ) {
+    throw new Error(
+      `Invalid shouldRequirePayment policy for endpoint ${endpoint.id}: expected a function or boolean`,
+    );
+  }
+
+  if (
+    endpoint.paymentMetadata !== undefined
+    && typeof endpoint.paymentMetadata !== "function"
+    && (typeof endpoint.paymentMetadata !== "object" || Array.isArray(endpoint.paymentMetadata))
+  ) {
+    throw new Error(
+      `Invalid paymentMetadata policy for endpoint ${endpoint.id}: expected a function or object`,
+    );
+  }
+}
+
+async function evaluateEndpointPolicy(endpoint, req, config) {
+  const rawQuery =
+    String(endpoint.method || "GET").toUpperCase() === "GET"
+      ? req.query.q
+      : (req.body?.query ?? req.query.q);
+  const query = String(rawQuery || "default query");
+  const context = {
+    req,
+    query,
+    config,
+    endpoint,
+  };
+
+  const shouldRequirePayment = typeof endpoint.shouldRequirePayment === "function"
+    ? await endpoint.shouldRequirePayment(context)
+    : endpoint.shouldRequirePayment ?? true;
+  const priceUsd = endpoint.pricing
+    ? assertValidPrice(await endpoint.pricing(context))
+    : getPriceUsdFromCatalog(config.endpointCatalog, endpoint.id, query);
+  const paymentMetadata = typeof endpoint.paymentMetadata === "function"
+    ? assertValidPaymentMetadata(await endpoint.paymentMetadata(context))
+    : assertValidPaymentMetadata(endpoint.paymentMetadata);
+
+  return {
+    query,
+    shouldRequirePayment: Boolean(shouldRequirePayment),
+    priceUsd,
+    paymentMetadata,
+  };
+}
+
+async function evaluateIntentPolicy(endpoint, req, config, queryOverride) {
+  const normalizedQuery = queryOverride
+    ?? req.body?.query
+    ?? req.query?.q;
+
+  return evaluateEndpointPolicy(
+    endpoint,
+    {
+      ...req,
+      query: {
+        ...(req.query || {}),
+        q: normalizedQuery,
+      },
+      body: {
+        ...(req.body || {}),
+        query: normalizedQuery,
+      },
+    },
+    config,
+  );
+}
+
 function deriveRouteId(route) {
   if (route.id) {
     return route.id;
@@ -70,12 +161,19 @@ function deriveRouteId(route) {
   );
 }
 
+function isDependencyStorageError(error) {
+  const message = String(error?.message || error || "");
+
+  return /ECONNREFUSED|ENOTFOUND|connect|timeout|authentication failed|password authentication failed/i
+    .test(message);
+}
+
+function getStorageFailureStatus(error, fallbackStatus = 500) {
+  return isDependencyStorageError(error) ? 503 : fallbackStatus;
+}
+
 function normalizeProtectedRoutes(routes = []) {
   return routes.map((route) => {
-    if (typeof route.handler !== "function") {
-      throw new Error(`Missing handler for protected route ${route.path || route.id}`);
-    }
-
     const id = deriveRouteId(route);
 
     const method = (route.method || "GET").toUpperCase();
@@ -87,14 +185,33 @@ function normalizeProtectedRoutes(routes = []) {
     const path = route.path || `/${id}`;
     assertValidRoutePath(path);
 
-    return {
+    const hasHandler = typeof route.handler === "function";
+    const hasUpstream = Boolean(route.upstream);
+
+    if (!hasHandler && !hasUpstream) {
+      throw new Error(`Missing handler or upstream config for protected route ${path}`);
+    }
+
+    if (hasUpstream) {
+      validateUpstreamRouteConfig({ ...route, id, path, method });
+    }
+
+    const normalizedRoute = {
       id,
       path,
       method,
       description: route.description || `Protected route ${id}`,
       basePriceUsd: assertValidPrice(route.basePriceUsd || route.priceUsd || "0.01"),
-      handler: route.handler,
+      handler: hasHandler ? route.handler : createUpstreamHandler({ ...route, id, path, method }),
+      upstream: route.upstream,
+      pricing: route.pricing,
+      shouldRequirePayment: route.shouldRequirePayment,
+      paymentMetadata: route.paymentMetadata,
     };
+
+    validateEndpointPolicy(normalizedRoute);
+
+    return normalizedRoute;
   });
 }
 
@@ -179,6 +296,8 @@ function normalizeProviderOptions(options = {}) {
   };
 
   for (const endpointId of Object.keys(endpointCatalog)) {
+    validateEndpointPolicy(endpointCatalog[endpointId]);
+
     if (typeof handlers[endpointId] !== "function") {
       throw new Error(`Missing handler for endpoint: ${endpointId}`);
     }
@@ -325,14 +444,26 @@ function registerPublicRoutes(app, provider) {
   });
 
   app.get("/stats", async (req, res) => {
-    res.json(await usageStore.readStats());
+    try {
+      res.json(await usageStore.readStats());
+    } catch (error) {
+      res.status(getStorageFailureStatus(error)).json({
+        error: String(error.message || error),
+      });
+    }
   });
 
   app.get("/intents", async (req, res) => {
-    const limit = req.query.limit ? Number.parseInt(String(req.query.limit), 10) : 50;
-    res.json({
-      items: await intentStore.listIntents(Number.isNaN(limit) ? 50 : limit),
-    });
+    try {
+      const limit = req.query.limit ? Number.parseInt(String(req.query.limit), 10) : 50;
+      res.json({
+        items: await intentStore.listIntents(Number.isNaN(limit) ? 50 : limit),
+      });
+    } catch (error) {
+      res.status(getStorageFailureStatus(error)).json({
+        error: String(error.message || error),
+      });
+    }
   });
 
   app.post("/intents", async (req, res) => {
@@ -344,51 +475,71 @@ function registerPublicRoutes(app, provider) {
         return res.status(400).json({ error: "Missing required field: endpoint" });
       }
 
-      getEndpointConfigFromCatalog(endpointCatalog, endpoint);
-
-      const amount = getPriceUsdFromCatalog(endpointCatalog, endpoint, query);
+      const endpointConfig = getEndpointConfigFromCatalog(endpointCatalog, endpoint);
+      const policy = await evaluateIntentPolicy(endpointConfig, req, config, query);
+      const amount = policy.shouldRequirePayment ? policy.priceUsd : "0.00";
       const intent = await intentStore.createIntent({
         endpoint,
-        query,
+        query: policy.query,
         amount,
         asset: config.asset.symbol,
+        paymentRequired: policy.shouldRequirePayment,
+        paymentMetadata: policy.paymentMetadata,
       });
       const resourceUrl = `${config.gatewayUrl}/intents/${intent.id}/execute`;
-      const accepts = [
-        paymentContext.buildRequirementsForResource(resourceUrl, endpoint, query, {
-          priceUsd: amount,
-          description: `Execute AgentPay ${endpoint} intent`,
-          extra: {
-            intentId: intent.id,
-            flow: "intent-execution",
-          },
-        }),
-      ];
+      const accepts = policy.shouldRequirePayment
+        ? [
+          paymentContext.buildRequirementsForResource(resourceUrl, endpoint, policy.query, {
+            priceUsd: amount,
+            description: `Execute AgentPay ${endpoint} intent`,
+            extra: {
+              intentId: intent.id,
+              flow: "intent-execution",
+              ...policy.paymentMetadata,
+            },
+          }),
+        ]
+        : [];
 
       return res.status(201).json({
         intent,
-        paymentRequest: {
-          resource: resourceUrl,
-          amount,
-          asset: config.asset.symbol,
-        },
+        paymentRequest: policy.shouldRequirePayment
+          ? {
+            resource: resourceUrl,
+            amount,
+            asset: config.asset.symbol,
+          }
+          : null,
         accepts,
+        payment: {
+          status: policy.shouldRequirePayment ? "required" : "not_required",
+          network: config.network,
+          asset: config.asset.symbol,
+          amount,
+          metadata: policy.paymentMetadata,
+        },
       });
     } catch (error) {
-      return res.status(400).json({
+      return res.status(getStorageFailureStatus(error, 400)).json({
         error: error.message,
       });
     }
   });
 
   app.get("/intents/:intentId", async (req, res) => {
-    const intent = await intentStore.getIntentById(req.params.intentId);
+    try {
+      const intent = await intentStore.getIntentById(req.params.intentId);
 
-    if (!intent) {
-      return res.status(404).json({ error: "Intent not found" });
+      if (!intent) {
+        return res.status(404).json({ error: "Intent not found" });
+      }
+
+      return res.json({ intent });
+    } catch (error) {
+      return res.status(getStorageFailureStatus(error)).json({
+        error: String(error.message || error),
+      });
     }
-
-    return res.json({ intent });
   });
 
   return endpointValues;
@@ -406,15 +557,33 @@ function registerIntentExecutionRoutes(app, provider) {
 
   app.post(
     "/intents/:intentId/execute",
-    requirePaymentWith(async (req) => {
+    async (req, res, next) => {
       const intent = await intentStore.getIntentById(req.params.intentId);
 
       if (!intent) {
-        throw new Error("Intent not found");
+        return res.status(404).json({ error: "Intent not found" });
       }
 
-      return paymentContext.buildRequirementsForResource(
-        `${req.protocol}://${req.get("host")}${req.originalUrl}`,
+      req.intent = intent;
+
+      if (!intent.paymentRequired) {
+        req.pricing = {
+          amount: "0.00",
+          asset: config.asset.symbol,
+          metadata: intent.paymentMetadata || {},
+        };
+        req.paymentState = {
+          status: "not_required",
+          network: config.network,
+          asset: config.asset.symbol,
+          amount: "0.00",
+          metadata: intent.paymentMetadata || {},
+        };
+        return next();
+      }
+
+      return requirePaymentWith(async (paymentReq) => paymentContext.buildRequirementsForResource(
+        `${paymentReq.protocol}://${paymentReq.get("host")}${paymentReq.originalUrl}`,
         intent.endpoint,
         intent.query,
         {
@@ -423,12 +592,13 @@ function registerIntentExecutionRoutes(app, provider) {
           extra: {
             intentId: intent.id,
             flow: "intent-execution",
+            ...(intent.paymentMetadata || {}),
           },
         },
-      );
-    }, paymentContext),
+      ), paymentContext)(req, res, next);
+    },
     async (req, res) => {
-      const intent = await intentStore.getIntentById(req.params.intentId);
+      const intent = req.intent || await intentStore.getIntentById(req.params.intentId);
 
       if (!intent) {
         return res.status(404).json({ error: "Intent not found" });
@@ -445,37 +615,62 @@ function registerIntentExecutionRoutes(app, provider) {
       executingIntents.add(intent.id);
 
       try {
-        await intentStore.updateIntent(intent.id, {
-          status: "paid",
-          payment: {
-            network: config.network,
-            asset: config.asset.symbol,
-            amount: intent.amount,
-          },
-        });
+        if (intent.paymentRequired) {
+          await intentStore.updateIntent(intent.id, {
+            status: "paid",
+            payment: {
+              network: config.network,
+              asset: config.asset.symbol,
+              amount: intent.amount,
+              metadata: intent.paymentMetadata || {},
+            },
+          });
+        }
 
         const result = await handlers[intent.endpoint](config, intent.query, {
           intent,
           req,
         });
         let settlement = null;
+        let payment = req.paymentState;
 
-        try {
-          settlement = await paymentContext.settle(
-            req.paymentPayload,
-            req.paymentRequirements,
-          );
-        } catch (error) {
-          settlement = {
-            success: false,
+        if (intent.paymentRequired) {
+          try {
+            settlement = await paymentContext.settle(
+              req.paymentPayload,
+              req.paymentRequirements,
+            );
+          } catch (error) {
+            settlement = {
+              success: false,
+              network: config.network,
+              error: error.message,
+            };
+            console.error("Settlement failed:", error.message);
+          }
+
+          payment = {
+            status: "verified",
             network: config.network,
-            error: error.message,
+            asset: config.asset.symbol,
+            amount: intent.amount,
+            metadata: intent.paymentMetadata || {},
+            receipt: settlement?.receipt || null,
+            settlement,
           };
-          console.error("Settlement failed:", error.message);
+        } else if (!payment) {
+          payment = {
+            status: "not_required",
+            network: config.network,
+            asset: config.asset.symbol,
+            amount: "0.00",
+            metadata: intent.paymentMetadata || {},
+          };
         }
 
         const finalizedIntent = await intentStore.updateIntent(intent.id, {
           status: "executed",
+          payment,
           settlement,
           result,
           executedAt: new Date().toISOString(),
@@ -485,12 +680,7 @@ function registerIntentExecutionRoutes(app, provider) {
           endpoint: intent.endpoint,
           query: intent.query,
           timestamp: new Date().toISOString(),
-          payment: {
-            status: "verified",
-            network: config.network,
-            asset: config.asset.symbol,
-            amount: intent.amount,
-          },
+          payment,
           intentId: intent.id,
           flow: "intent-execution",
         });
@@ -498,13 +688,7 @@ function registerIntentExecutionRoutes(app, provider) {
         return res.json({
           success: true,
           intent: finalizedIntent,
-          payment: {
-            status: "verified",
-            network: config.network,
-            asset: config.asset.symbol,
-            amount: intent.amount,
-            settlement,
-          },
+          payment,
           result,
         });
       } catch (error) {
@@ -530,52 +714,99 @@ function registerDirectEndpointRoutes(app, provider) {
 
   for (const endpoint of Object.values(endpointCatalog)) {
     const method = String(endpoint.method || "GET").toLowerCase();
-    app[method](endpoint.path, requirePayment(endpoint.id, paymentContext), async (req, res) => {
+    app[method](endpoint.path, async (req, res, next) => {
       try {
-        const rawQuery =
-          method === "get"
-            ? req.query.q
-            : (req.body?.query ?? req.query.q);
-        const query = String(rawQuery || "default query");
+        const policy = await evaluateEndpointPolicy(endpoint, req, config);
+        req.agentpayPolicy = policy;
+
+        if (!policy.shouldRequirePayment) {
+          req.pricing = {
+            amount: "0.00",
+            asset: config.asset.symbol,
+            metadata: policy.paymentMetadata,
+          };
+          req.paymentState = {
+            status: "not_required",
+            network: config.network,
+            asset: config.asset.symbol,
+            amount: "0.00",
+            metadata: policy.paymentMetadata,
+          };
+          return next();
+        }
+
+        return requirePaymentWith(
+          (paymentReq) => paymentContext.buildRequirementsForResource(
+            `${paymentReq.protocol}://${paymentReq.get("host")}${paymentReq.originalUrl}`,
+            endpoint.id,
+            policy.query,
+            {
+              priceUsd: policy.priceUsd,
+              extra: {
+                ...policy.paymentMetadata,
+              },
+            },
+          ),
+          paymentContext,
+        )(req, res, next);
+      } catch (error) {
+        return res.status(400).json({
+          error: String(error.message || error),
+        });
+      }
+    }, async (req, res) => {
+      try {
+        const query = req.agentpayPolicy?.query
+          || String((method === "get" ? req.query.q : (req.body?.query ?? req.query.q)) || "default query");
         const result = await handlers[endpoint.id](config, query, { req });
         let settlement = null;
+        let payment = req.paymentState;
 
-        try {
-          settlement = await paymentContext.settle(
-            req.paymentPayload,
-            req.paymentRequirements,
-          );
-        } catch (error) {
-          settlement = {
-            success: false,
+        if (req.paymentPayload && req.paymentRequirements) {
+          try {
+            settlement = await paymentContext.settle(
+              req.paymentPayload,
+              req.paymentRequirements,
+            );
+          } catch (error) {
+            settlement = {
+              success: false,
+              network: config.network,
+              error: error.message,
+            };
+            console.error("Settlement failed:", error.message);
+          }
+
+          payment = {
+            status: "verified",
             network: config.network,
-            error: error.message,
+            asset: config.asset.symbol,
+            amount: req.pricing.amount,
+            metadata: req.agentpayPolicy?.paymentMetadata || {},
+            receipt: settlement?.receipt || null,
+            settlement,
           };
-          console.error("Settlement failed:", error.message);
+        } else if (!payment) {
+          payment = {
+            status: "not_required",
+            network: config.network,
+            asset: config.asset.symbol,
+            amount: "0.00",
+            metadata: req.agentpayPolicy?.paymentMetadata || {},
+          };
         }
 
         await usageStore.logRequest({
           endpoint: endpoint.id,
           query,
           timestamp: new Date().toISOString(),
-          payment: {
-            status: "verified",
-            network: config.network,
-            asset: config.asset.symbol,
-            amount: req.pricing.amount,
-          },
+          payment,
         });
 
         res.json({
           success: true,
           endpoint: endpoint.id,
-          payment: {
-            status: "verified",
-            network: config.network,
-            asset: config.asset.symbol,
-            amount: req.pricing.amount,
-            settlement,
-          },
+          payment,
           result,
         });
       } catch (error) {
@@ -597,7 +828,7 @@ export function createAgentPayProvider(options = {}) {
     usageStore,
     protectedRoutes,
   } = normalizeProviderOptions(options);
-  const paymentContext = createPaymentContext(config);
+  const paymentContext = options.paymentContext || createPaymentContext(config);
   const provider = {
     config,
     endpointCatalog: config.endpointCatalog,
@@ -623,8 +854,7 @@ export function createAgentPayProvider(options = {}) {
       }
 
       await runCheck("payment", async () => ({
-        ok: true,
-        status: "ready",
+        ...(await paymentContext.checkPayeeAssetReadiness()),
         network: config.network,
         asset: config.asset.symbol,
       }));

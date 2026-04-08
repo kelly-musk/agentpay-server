@@ -1,8 +1,12 @@
 import {
   Asset,
+  Contract,
   Horizon,
+  Keypair,
+  Operation,
   StrKey,
   TransactionBuilder,
+  nativeToScVal,
   rpc,
   scValToNative,
 } from "@stellar/stellar-sdk";
@@ -21,13 +25,42 @@ import {
 } from "./pricing.js";
 
 const DISCOVERY_UPDATED_AT = Date.now();
+export const NETWORK_IDS = Object.freeze({
+  BASE_SEPOLIA: "base-sepolia",
+  BASE_MAINNET: "base",
+  SOLANA_DEVNET: "solana-devnet",
+  STELLAR_TESTNET: "stellar-testnet",
+  STELLAR_MAINNET: "stellar",
+});
+export const SUPPORTED_NETWORK_IDS = Object.freeze([
+  NETWORK_IDS.STELLAR_TESTNET,
+  NETWORK_IDS.STELLAR_MAINNET,
+]);
+export const CLASSIC_ASSET_IDS = Object.freeze({
+  USDC: "USDC",
+});
+export const CLASSIC_STELLAR_ASSETS = Object.freeze({
+  [NETWORK_IDS.STELLAR_TESTNET]: Object.freeze({
+    [CLASSIC_ASSET_IDS.USDC]: Object.freeze({
+      code: "USDC",
+      issuer: "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+      symbol: "USDC",
+      name: "USD Coin",
+    }),
+  }),
+  [NETWORK_IDS.STELLAR_MAINNET]: Object.freeze({}),
+});
+
+export function isSupportedNetworkId(network) {
+  return SUPPORTED_NETWORK_IDS.includes(normalizeNetwork(network));
+}
 
 function normalizeNetwork(network) {
   if (network === "testnet") {
     return "stellar-testnet";
   }
 
-  return network || "stellar-testnet";
+  return network;
 }
 
 function normalizeAssetConfig(network, rawAsset) {
@@ -99,10 +132,18 @@ export function validateGatewayConfig(config) {
     throw new Error("Invalid gateway config: expected an object");
   }
 
+  if (!config.network) {
+    throw new Error(
+      `Missing required network: set config.network or X402_NETWORK to one of ${SUPPORTED_NETWORK_IDS.join(", ")}`,
+    );
+  }
+
   const network = normalizeNetwork(config.network);
 
-  if (!STELLAR_NETWORKS[network]) {
-    throw new Error(`Unsupported network: ${network}`);
+  if (!isSupportedNetworkId(network) || !STELLAR_NETWORKS[network]) {
+    throw new Error(
+      `Unsupported network: ${network}. This package currently supports ${SUPPORTED_NETWORK_IDS.join(", ")}.`,
+    );
   }
 
   if (!config.walletAddress) {
@@ -148,6 +189,301 @@ function toBaseUnits(displayAmount, decimals) {
   return (whole + fraction).toString();
 }
 
+function fromBaseUnits(baseAmount, decimals) {
+  const value = String(baseAmount || "0");
+  const negative = value.startsWith("-");
+  const digits = negative ? value.slice(1) : value;
+  const padded = digits.padStart(decimals + 1, "0");
+  const whole = padded.slice(0, -decimals) || "0";
+  const fraction = decimals > 0 ? padded.slice(-decimals).replace(/0+$/, "") : "";
+  const display = fraction ? `${whole}.${fraction}` : whole;
+  return negative ? `-${display}` : display;
+}
+
+function getExplorerUrls(network, transactionHash, account) {
+  if (network === NETWORK_IDS.STELLAR_TESTNET) {
+    return {
+      transaction: `https://testnet.stellar.expert/explorer/testnet/tx/${transactionHash}`,
+      account: account
+        ? `https://testnet.stellar.expert/explorer/testnet/account/${account}`
+        : undefined,
+    };
+  }
+
+  if (network === NETWORK_IDS.STELLAR_MAINNET) {
+    return {
+      transaction: `https://stellar.expert/explorer/public/tx/${transactionHash}`,
+      account: account
+        ? `https://stellar.expert/explorer/public/account/${account}`
+        : undefined,
+    };
+  }
+
+  return {
+    transaction: undefined,
+    account: undefined,
+  };
+}
+
+function extractLedgerDetails(result = {}) {
+  return {
+    ledger: result.ledger
+      ?? result.ledgerSeq
+      ?? result.latestLedger
+      ?? result.ledgerSequence
+      ?? null,
+    ledgerCloseTime: result.created_at
+      ?? result.createdAt
+      ?? result.closedAt
+      ?? result.ledgerCloseTime
+      ?? null,
+  };
+}
+
+function createRpcServer(network) {
+  return new rpc.Server(STELLAR_NETWORKS[network].sorobanRpcUrl);
+}
+
+async function simulateTokenBalanceForAccount({
+  network,
+  account,
+  publicKey,
+  asset,
+  rpcServer = createRpcServer(network),
+}) {
+  const contract = new Contract(asset.address);
+  const tx = new TransactionBuilder(account, {
+    fee: "1000000",
+    networkPassphrase: STELLAR_NETWORKS[network].networkPassphrase,
+  })
+    .addOperation(
+      contract.call(
+        "balance",
+        nativeToScVal(publicKey, { type: "address" }),
+      ),
+    )
+    .setTimeout(0)
+    .build();
+
+  return rpcServer.simulateTransaction(tx);
+}
+
+function resolveTrustlineAssetConfig(config) {
+  const classicAssetId = process.env.MERCHANT_CLASSIC_ASSET;
+  const registryAsset = classicAssetId
+    ? CLASSIC_STELLAR_ASSETS[config.network]?.[classicAssetId]
+    : null;
+
+  if (registryAsset) {
+    return { code: registryAsset.code, issuer: registryAsset.issuer };
+  }
+
+  const code = process.env.MERCHANT_ASSET_CODE
+    || process.env.X402_ASSET_CODE
+    || process.env.X402_ASSET_TRUSTLINE_CODE;
+  const issuer = process.env.MERCHANT_ASSET_ISSUER
+    || process.env.X402_ASSET_ISSUER
+    || process.env.X402_ASSET_TRUSTLINE_ISSUER;
+
+  if (!code || !issuer) {
+    return null;
+  }
+
+  return { code, issuer };
+}
+
+function resolveMerchantWalletSecret() {
+  return process.env.MERCHANT_WALLET_SECRET_KEY
+    || process.env.WALLET_SECRET_KEY
+    || process.env.STELLAR_SECRET_KEY;
+}
+
+async function ensurePayeeTrustline({
+  config,
+  network,
+  horizonServer,
+  account,
+  trustlineAsset,
+}) {
+  const merchantSecret = resolveMerchantWalletSecret();
+
+  if (!merchantSecret) {
+    throw new Error(
+      "Automatic trustline setup requires MERCHANT_WALLET_SECRET_KEY for the payee wallet",
+    );
+  }
+
+  const keypair = Keypair.fromSecret(merchantSecret);
+
+  if (keypair.publicKey() !== config.walletAddress) {
+    throw new Error("Configured payee secret does not match walletAddress");
+  }
+
+  const asset = new Asset(trustlineAsset.code, trustlineAsset.issuer);
+  const transaction = new TransactionBuilder(account, {
+    fee: "100000",
+    networkPassphrase: STELLAR_NETWORKS[network].networkPassphrase,
+  })
+    .addOperation(Operation.changeTrust({ asset }))
+    .setTimeout(60)
+    .build();
+
+  transaction.sign(keypair);
+
+  return horizonServer.submitTransaction(transaction);
+}
+
+export async function checkPayeeAssetReadiness(
+  config,
+  {
+    horizonServer = new Horizon.Server(STELLAR_NETWORKS[config.network].horizonUrl),
+    rpcServer = createRpcServer(config.network),
+    autoCreateTrustline = process.env.AUTO_CREATE_PAYEE_TRUSTLINE === "true",
+    trustlineAsset = resolveTrustlineAssetConfig(config),
+  } = {},
+) {
+  let account;
+
+  try {
+    account = await horizonServer.loadAccount(config.walletAddress);
+  } catch (error) {
+    if (String(error.message || error).includes("Not Found")) {
+      return {
+        ok: false,
+        status: "missing_account",
+        payee: config.walletAddress,
+        asset: config.asset.symbol,
+        nextStep: `Fund the payee account ${config.walletAddress} on ${config.network} before accepting payments.`,
+      };
+    }
+
+    throw error;
+  }
+
+  if (config.asset.address === "native") {
+    return {
+      ok: true,
+      status: "ready",
+      payee: config.walletAddress,
+      asset: config.asset.symbol,
+    };
+  }
+
+  const simulation = await simulateTokenBalanceForAccount({
+    network: config.network,
+    account,
+    publicKey: config.walletAddress,
+    asset: config.asset,
+    rpcServer,
+  });
+
+  if (!simulation.error) {
+    return {
+      ok: true,
+      status: "ready",
+      payee: config.walletAddress,
+      asset: config.asset.symbol,
+    };
+  }
+
+  if (String(simulation.error).includes("trustline entry is missing for account")) {
+    if (autoCreateTrustline) {
+      if (!trustlineAsset) {
+        return {
+          ok: false,
+          status: "missing_trustline",
+          payee: config.walletAddress,
+          asset: config.asset.symbol,
+          nextStep:
+            "Automatic trustline setup requires MERCHANT_CLASSIC_ASSET for a known registry asset, or MERCHANT_ASSET_CODE and MERCHANT_ASSET_ISSUER for a custom classic asset.",
+        };
+      }
+
+      await ensurePayeeTrustline({
+        config,
+        network: config.network,
+        horizonServer,
+        account,
+        trustlineAsset,
+      });
+
+      return {
+        ok: true,
+        status: "trustline_created",
+        payee: config.walletAddress,
+        asset: config.asset.symbol,
+        trustlineAsset,
+      };
+    }
+
+    return {
+      ok: false,
+      status: "missing_trustline",
+      payee: config.walletAddress,
+      asset: config.asset.symbol,
+      nextStep:
+        `The payee wallet ${config.walletAddress} cannot receive ${config.asset.symbol} yet. ` +
+        "Add the required trustline first, or enable AUTO_CREATE_PAYEE_TRUSTLINE=true and configure MERCHANT_WALLET_SECRET_KEY plus MERCHANT_CLASSIC_ASSET (or MERCHANT_ASSET_CODE/MERCHANT_ASSET_ISSUER for a custom classic asset).",
+    };
+  }
+
+  return {
+    ok: false,
+    status: "unready",
+    payee: config.walletAddress,
+    asset: config.asset.symbol,
+    error: String(simulation.error),
+    nextStep: "Resolve the payee wallet asset configuration before accepting payments.",
+  };
+}
+
+export function createPaymentReceipt(config, paymentRequirements, details = {}) {
+  const amountBaseUnits = String(
+    details.amountBaseUnits
+      ?? paymentRequirements?.maxAmountRequired
+      ?? "0",
+  );
+  const transactionHash = details.transactionHash || details.transaction || null;
+  const payer = details.payer || null;
+  const payee = details.payee || paymentRequirements?.payTo || config.walletAddress;
+  const assetAddress = details.assetAddress || paymentRequirements?.asset || config.asset.address;
+  const explorer = transactionHash
+    ? getExplorerUrls(config.network, transactionHash, payer)
+    : { transaction: undefined, account: undefined };
+
+  return {
+    receiptId: transactionHash ? `${config.network}:${transactionHash}` : null,
+    status: details.status || "confirmed",
+    confirmed: details.confirmed ?? true,
+    network: config.network,
+    scheme: paymentRequirements?.scheme || "exact",
+    transactionHash,
+    ledger: details.ledger ?? null,
+    ledgerCloseTime: details.ledgerCloseTime || null,
+    submittedAt: details.submittedAt || null,
+    finalizedAt: details.finalizedAt || new Date().toISOString(),
+    payer,
+    payee,
+    asset: {
+      address: assetAddress,
+      symbol: config.asset.symbol,
+      displayName: config.asset.displayName,
+      decimals: config.asset.decimals,
+    },
+    amount: {
+      requested: paymentRequirements?.extra?.priceUsd || null,
+      display: fromBaseUnits(amountBaseUnits, config.asset.decimals),
+      baseUnits: amountBaseUnits,
+    },
+    resource: paymentRequirements?.resource || null,
+    endpoint: paymentRequirements?.extra?.endpoint || null,
+    intentId: paymentRequirements?.extra?.intentId || null,
+    flow: paymentRequirements?.extra?.flow || "direct",
+    explorer,
+    raw: details.raw || undefined,
+  };
+}
+
 function buildOutputSchema(assetSymbol) {
   return {
     type: "object",
@@ -161,6 +497,10 @@ function buildOutputSchema(assetSymbol) {
           network: { type: "string" },
           asset: { type: "string" },
           amount: { type: "string" },
+          receipt: {
+            type: "object",
+            additionalProperties: true,
+          },
         },
       },
       result: {},
@@ -172,7 +512,15 @@ function buildOutputSchema(assetSymbol) {
 }
 
 export function loadGatewayConfig() {
-  const network = normalizeNetwork(process.env.X402_NETWORK);
+  const rawNetwork = process.env.X402_NETWORK;
+  const network = normalizeNetwork(rawNetwork);
+
+  if (!network) {
+    throw new Error(
+      `Missing required X402_NETWORK. Supported values: ${SUPPORTED_NETWORK_IDS.join(", ")}`,
+    );
+  }
+
   const asset = normalizeAssetConfig(network, process.env.X402_ASSET);
   const walletAddress = process.env.WALLET_ADDRESS;
 
@@ -498,7 +846,7 @@ export function createPaymentContext(rawConfig) {
     }
   }
 
-  async function settleNativePayment(paymentPayload) {
+  async function settleNativePayment(paymentPayload, paymentRequirements) {
     const parsed = PaymentPayloadSchema.parse(paymentPayload);
     const horizonServer = new Horizon.Server(
       STELLAR_NETWORKS[config.network].horizonUrl,
@@ -508,15 +856,32 @@ export function createPaymentContext(rawConfig) {
 
     seenNonces.add(parsed.payload.nonce);
 
+    const { ledger, ledgerCloseTime } = extractLedgerDetails(response);
+    const receipt = createPaymentReceipt(config, paymentRequirements, {
+      transactionHash: response.hash,
+      payer: parsed.payload.sourceAccount,
+      payee: parsed.payload.destination,
+      amountBaseUnits: parsed.payload.amount,
+      ledger,
+      ledgerCloseTime,
+      submittedAt: response.created_at || new Date().toISOString(),
+      finalizedAt: response.created_at || new Date().toISOString(),
+      raw: {
+        envelopeXdr: response.envelope_xdr,
+        resultXdr: response.result_xdr,
+      },
+    });
+
     return {
       success: true,
       payer: parsed.payload.sourceAccount,
       transaction: response.hash,
       network: config.network,
+      receipt,
     };
   }
 
-  async function settleContractPayment(paymentPayload) {
+  async function settleContractPayment(paymentPayload, paymentRequirements) {
     const parsed = PaymentPayloadSchema.parse(paymentPayload);
     const rpcServer = new rpc.Server(
       STELLAR_NETWORKS[config.network].sorobanRpcUrl,
@@ -535,11 +900,26 @@ export function createPaymentContext(rawConfig) {
     for (let attempt = 0; attempt < 10; attempt += 1) {
       if (status === "SUCCESS") {
         seenNonces.add(parsed.payload.nonce);
+        const { ledger, ledgerCloseTime } = extractLedgerDetails(submission);
+        const receipt = createPaymentReceipt(config, paymentRequirements, {
+          transactionHash,
+          payer: parsed.payload.sourceAccount,
+          payee: parsed.payload.destination,
+          amountBaseUnits: parsed.payload.amount,
+          ledger,
+          ledgerCloseTime,
+          submittedAt: new Date().toISOString(),
+          finalizedAt: new Date().toISOString(),
+          raw: {
+            submissionStatus: submission.status,
+          },
+        });
         return {
           success: true,
           payer: parsed.payload.sourceAccount,
           transaction: transactionHash,
           network: config.network,
+          receipt,
         };
       }
 
@@ -550,15 +930,55 @@ export function createPaymentContext(rawConfig) {
       await new Promise((resolve) => setTimeout(resolve, 1200));
       const polled = await rpcServer.getTransaction(transactionHash);
       status = polled.status;
+
+      if (status === "SUCCESS") {
+        seenNonces.add(parsed.payload.nonce);
+        const { ledger, ledgerCloseTime } = extractLedgerDetails(polled);
+        const receipt = createPaymentReceipt(config, paymentRequirements, {
+          transactionHash,
+          payer: parsed.payload.sourceAccount,
+          payee: parsed.payload.destination,
+          amountBaseUnits: parsed.payload.amount,
+          ledger,
+          ledgerCloseTime,
+          submittedAt: new Date().toISOString(),
+          finalizedAt: new Date().toISOString(),
+          raw: {
+            status,
+          },
+        });
+        return {
+          success: true,
+          payer: parsed.payload.sourceAccount,
+          transaction: transactionHash,
+          network: config.network,
+          receipt,
+        };
+      }
     }
 
     seenNonces.add(parsed.payload.nonce);
+
+    const receipt = createPaymentReceipt(config, paymentRequirements, {
+      transactionHash,
+      payer: parsed.payload.sourceAccount,
+      payee: parsed.payload.destination,
+      amountBaseUnits: parsed.payload.amount,
+      submittedAt: new Date().toISOString(),
+      finalizedAt: new Date().toISOString(),
+      status: "submitted",
+      confirmed: false,
+      raw: {
+        status,
+      },
+    });
 
     return {
       success: true,
       payer: parsed.payload.sourceAccount,
       transaction: transactionHash,
       network: config.network,
+      receipt,
     };
   }
 
@@ -643,20 +1063,37 @@ export function createPaymentContext(rawConfig) {
       return facilitator.verify(paymentPayload, paymentRequirements);
     },
     settle: (paymentPayload, paymentRequirements) => {
+      const guardPayeeReadiness = async () => {
+        if (config.asset.address === "native") {
+          return;
+        }
+
+        const readiness = await checkPayeeAssetReadiness(config);
+
+        if (!readiness.ok) {
+          throw new Error(readiness.nextStep || "Payee asset readiness check failed");
+        }
+      };
+
       if (config.asset.address === "native") {
         return settleNativePayment(paymentPayload, paymentRequirements);
       }
 
       if (paymentRequirements.asset.startsWith("C")) {
-        return settleContractPayment(paymentPayload, paymentRequirements);
+        return guardPayeeReadiness().then(() =>
+          settleContractPayment(paymentPayload, paymentRequirements),
+        );
       }
 
-      return facilitator.settle(paymentPayload, paymentRequirements);
+      return guardPayeeReadiness().then(() =>
+        facilitator.settle(paymentPayload, paymentRequirements),
+      );
     },
     buildRequirements,
     buildRequirementsForResource,
     getCapabilities,
     getDiscoveryResources,
+    checkPayeeAssetReadiness: () => checkPayeeAssetReadiness(config),
   };
 }
 

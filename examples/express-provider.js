@@ -1,5 +1,5 @@
 import express from "express";
-import { registerAgentPayRoutes } from "../index.js";
+import { NETWORK_IDS, registerAgentPayRoutes } from "../index.js";
 
 const app = express();
 
@@ -10,7 +10,7 @@ registerAgentPayRoutes(app, {
     rustServiceUrl: process.env.RUST_SERVICE_URL || "",
     facilitatorUrl:
       process.env.FACILITATOR_URL || "https://facilitator.stellar-x402.org",
-    network: process.env.X402_NETWORK || "stellar-testnet",
+    network: process.env.X402_NETWORK || NETWORK_IDS.STELLAR_TESTNET,
     walletAddress: process.env.WALLET_ADDRESS,
     asset: {
       address: process.env.X402_ASSET || "native",
@@ -42,6 +42,20 @@ registerAgentPayRoutes(app, {
         label: query.length > 20 ? "long-form" : "short-form",
         source: "example-provider",
       }),
+    },
+    {
+      method: "POST",
+      path: "/proxy-summarize",
+      description: "Proxy paid summarize requests to an upstream API",
+      priceUsd: "0.04",
+      upstream: {
+        url: process.env.UPSTREAM_SUMMARIZE_URL || "https://api.example.com/summarize",
+        headers: process.env.UPSTREAM_API_KEY
+          ? {
+            Authorization: `Bearer ${process.env.UPSTREAM_API_KEY}`,
+          }
+          : {},
+      },
     },
   ],
   storage: {

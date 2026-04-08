@@ -98,6 +98,7 @@ import { registerAgentPayRoutes } from "agentpay-gateway";
 Import server/client helpers from stable SDK paths:
 
 ```js
+import { NETWORK_IDS } from "agentpay-gateway";
 import { createPaymentContext } from "agentpay-gateway/server";
 import { payFetch } from "agentpay-gateway/client";
 ```
@@ -106,10 +107,17 @@ Run provider or gateway config through the fail-fast validators:
 
 ```js
 import {
+  NETWORK_IDS,
+  SUPPORTED_NETWORK_IDS,
+  isSupportedNetworkId,
   validateGatewayConfig,
   validateProviderOptions,
 } from "agentpay-gateway/server";
 ```
+
+`NETWORK_IDS` includes the broader future identifier space. Use
+`SUPPORTED_NETWORK_IDS` or `isSupportedNetworkId(...)` when you need to check
+what this package actually supports at runtime today.
 
 Use the simpler declarative route API:
 
@@ -123,6 +131,56 @@ registerAgentPayRoutes(app, {
       description: "Summarize text",
       priceUsd: "0.05",
       handler: async (gatewayConfig, query) => ({ summary: query }),
+    },
+  ],
+});
+```
+
+Add route-level policy hooks when implementers need more than a static price:
+
+```js
+registerAgentPayRoutes(app, {
+  config,
+  routes: [
+    {
+      method: "POST",
+      path: "/summarize",
+      priceUsd: "0.05",
+      pricing: ({ query }) => (query.length > 20 ? "0.07" : "0.05"),
+      shouldRequirePayment: ({ req }) => req.headers["x-plan"] !== "pro",
+      paymentMetadata: ({ req }) => ({
+        tenantId: req.headers["x-tenant-id"],
+      }),
+      handler: async (gatewayConfig, query) => ({ summary: query }),
+    },
+  ],
+});
+```
+
+Those policy hooks now flow into intents as well. Intent creation stores the
+resolved price, payment-required decision, and metadata so intent execution uses
+the same policy outcome later.
+
+Provider and gateway network selection are explicit. For implementer-facing
+server integration, do not rely on a silent testnet default. Set
+`config.network` or `X402_NETWORK` directly.
+
+Or protect an existing upstream API directly:
+
+```js
+registerAgentPayRoutes(app, {
+  config,
+  routes: [
+    {
+      method: "POST",
+      path: "/summarize",
+      priceUsd: "0.05",
+      upstream: {
+        url: "https://api.example.com/summarize",
+        headers: {
+          Authorization: `Bearer ${process.env.UPSTREAM_API_KEY}`,
+        },
+      },
     },
   ],
 });
@@ -218,6 +276,22 @@ Use non-interactive setup flags when bootstrapping a machine:
 yarn cli setup --secret-key S... --network stellar-testnet --gateway-url http://localhost:3000 --asset USDC
 ```
 
+If the merchant backend should automatically create the payee trustline for a
+classic Stellar asset, set these server-side env vars:
+
+```bash
+AUTO_CREATE_PAYEE_TRUSTLINE=true
+MERCHANT_WALLET_SECRET_KEY=<merchant/payee stellar secret key>
+MERCHANT_CLASSIC_ASSET=USDC
+```
+
+For a custom classic asset that is not in the built-in registry:
+
+```bash
+MERCHANT_ASSET_CODE=<classic asset code>
+MERCHANT_ASSET_ISSUER=<classic stellar issuer address>
+```
+
 Run quality checks:
 
 ```bash
@@ -270,6 +344,8 @@ To swap local fallback logic for Rust-backed execution:
 ## Environment Notes
 
 - `WALLET_ADDRESS` is required for the merchant side.
+- `X402_NETWORK` is required for gateway/provider startup unless you pass
+  `config.network` directly in code.
 - the preferred CLI path is secure local secret storage via `yarn cli setup`
 - `STELLAR_SECRET_KEY` remains available as a fallback/dev path
 - `AUTO_FUND_TESTNET_ACCOUNTS=true` is useful for local testnet demos.

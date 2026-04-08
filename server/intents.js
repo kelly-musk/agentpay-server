@@ -17,7 +17,8 @@ function sortIntents(intents) {
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 }
 
-function createIntentRecord({ endpoint, query, amount, asset }) {
+function createIntentRecord(input) {
+  const { endpoint, query, amount, asset, ...rest } = input;
   const timestamp = new Date().toISOString();
 
   return {
@@ -29,6 +30,7 @@ function createIntentRecord({ endpoint, query, amount, asset }) {
     status: "pending",
     createdAt: timestamp,
     updatedAt: timestamp,
+    ...rest,
   };
 }
 

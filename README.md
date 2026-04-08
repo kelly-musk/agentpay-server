@@ -85,6 +85,108 @@ Backend Handler / Forwarded Service
 Structured Response + Payment Metadata + Logging
 ```
 
+## Product Architecture
+
+```text
+                         AGENTPAY PRODUCT ARCHITECTURE
+
+┌──────────────────────────── IMPLEMENTER SIDE ─────────────────────────────┐
+│                                                                           │
+│  Developer / Company / Protocol                                           │
+│          │                                                                │
+│          ▼                                                                │
+│  Integrates AgentPay into:                                                │
+│  - paid API service                                                       │
+│  - protocol service                                                       │
+│  - SaaS backend                                                           │
+│  - agent platform                                                         │
+│          │                                                                │
+│          ▼                                                                │
+│  Configures:                                                              │
+│  - protected routes                                                       │
+│  - pricing                                                                │
+│  - merchant wallet                                                        │
+│  - backend handler / forward target                                       │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌──────────────────────────── AGENTPAY LAYER ───────────────────────────────┐
+│                                                                           │
+│  AgentPay Gateway / Middleware / SDK                                      │
+│  - returns 402 payment challenge                                          │
+│  - exposes payment requirements                                           │
+│  - verifies x-payment                                                     │
+│  - settles Stellar transaction                                            │
+│  - unlocks backend resource                                               │
+│  - logs usage and revenue                                                 │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+                                   │
+               ┌───────────────────┴───────────────────┐
+               │                                       │
+               ▼                                       ▼
+
+      FRONTEND CONSUMER FLOW                    BACKEND CONSUMER FLOW
+
+┌──────────────────────────────┐         ┌──────────────────────────────┐
+│ Frontend App / Web Product   │         │ Backend Service / Agent      │
+│ consuming paid API           │         │ consuming paid API           │
+└──────────────────────────────┘         └──────────────────────────────┘
+               │                                       │
+               ▼                                       ▼
+      Calls protected endpoint                 Calls protected endpoint
+               │                                       │
+               ▼                                       ▼
+          Receives 402                            Receives 402
+               │                                       │
+               ▼                                       ▼
+      Decide who pays:                          Service pays itself
+               │                                       │
+       ┌───────┴────────┐                              │
+       │                │                              ▼
+       ▼                ▼                    Backend wallet signs payment
+User wallet pays   Platform backend pays              │
+       │                │                              ▼
+       │                ▼                     Retries with x-payment
+       │        Service wallet signs                   │
+       │                │                              ▼
+       ▼                ▼                      AgentPay verifies
+Connect wallet     Retries with x-payment              │
+signs payment             │                            ▼
+       │                  ▼                     Protected logic runs
+       ▼          AgentPay verifies                    │
+Retries with             │                             ▼
+x-payment                ▼                      Response returned
+       │          Protected logic runs
+       ▼                  │
+AgentPay verifies         ▼
+       │           Response returned
+       ▼
+Protected logic runs
+       │
+       ▼
+Response returned
+```
+
+This is the intended product shape:
+
+- implementers integrate AgentPay into their own service, protocol, or platform
+- AgentPay acts as the payment and authorization layer
+- consumers can be frontend apps, agents, or backend services
+- payment can come from the end user wallet or from a service wallet
+
+The two payer models matter:
+
+- user-paid flow: the caller receives `402`, connects a wallet, signs the payment, and retries
+- service-paid flow: the platform or backend holds a service wallet, signs server-side, and retries on behalf of its own consumption
+
+In practice:
+
+- browser/frontend integrations should use wallet-connect style signing when the end user is the payer
+- backend and agent integrations should use a service wallet stored in server-side env or a secret manager
+- frontends should not embed raw private keys for payment signing
+
 ## Provider Integration
 
 The package now exposes a reusable provider surface for implementers:
@@ -108,7 +210,7 @@ The package now exposes a reusable provider surface for implementers:
 Stable import paths:
 
 ```js
-import { registerAgentPayRoutes } from "agentpay-gateway";
+import { NETWORK_IDS, registerAgentPayRoutes } from "agentpay-gateway";
 import { createPaymentContext } from "agentpay-gateway/server";
 import { getPriceUsd } from "agentpay-gateway/pricing";
 import { payFetch } from "agentpay-gateway/client";
@@ -118,11 +220,32 @@ AgentPay validates provider and gateway config before route registration. Invali
 wallets, URLs, route methods, prices, or storage definitions fail fast during
 startup instead of surfacing later as runtime payment errors.
 
+Network selection is explicit by design. Implementers must provide
+`config.network` or `X402_NETWORK`; the gateway no longer silently falls back to
+testnet on the server/provider side.
+
+For a better developer experience, the SDK exports named network constants:
+
+```js
+import {
+  NETWORK_IDS,
+  SUPPORTED_NETWORK_IDS,
+  isSupportedNetworkId,
+} from "agentpay-gateway";
+
+const network = NETWORK_IDS.STELLAR_TESTNET;
+const supported = isSupportedNetworkId(network);
+```
+
+`NETWORK_IDS` is the forward-looking identifier surface for the SDK. The current
+runtime support in this package is narrower and exposed via
+`SUPPORTED_NETWORK_IDS`, which currently contains only Stellar network ids.
+
 The simplest integration path is now a declarative protected-route array:
 
 ```js
 import express from "express";
-import { registerAgentPayRoutes } from "agentpay-gateway";
+import { NETWORK_IDS, registerAgentPayRoutes } from "agentpay-gateway";
 
 const app = express();
 
@@ -142,6 +265,65 @@ registerAgentPayRoutes(app, {
   ],
 });
 ```
+
+Routes can also define policy hooks for dynamic pricing, conditional paywalling,
+and extra payment metadata:
+
+```js
+registerAgentPayRoutes(app, {
+  config,
+  routes: [
+    {
+      method: "POST",
+      path: "/summarize",
+      description: "Summarize text",
+      priceUsd: "0.05",
+      pricing: ({ query }) => (query.length > 20 ? "0.07" : "0.05"),
+      shouldRequirePayment: ({ req }) => req.headers["x-plan"] !== "pro",
+      paymentMetadata: ({ req }) => ({
+        tenantId: req.headers["x-tenant-id"],
+        plan: req.headers["x-plan"],
+      }),
+      handler: async (gatewayConfig, query) => ({
+        summary: `Summarized: ${query}`,
+      }),
+    },
+  ],
+});
+```
+
+The same hooks also apply to the intent lifecycle:
+
+- `POST /intents` evaluates pricing, paywall, and payment metadata policies
+- the resulting policy output is stored on the intent
+- `POST /intents/:intentId/execute` follows the stored policy result
+
+If you already have an upstream API and want AgentPay to sit in front of it,
+routes can proxy directly to that upstream without a custom local handler:
+
+```js
+registerAgentPayRoutes(app, {
+  config,
+  routes: [
+    {
+      method: "POST",
+      path: "/summarize",
+      description: "Paid summarize endpoint",
+      priceUsd: "0.05",
+      upstream: {
+        url: "https://api.example.com/summarize",
+        headers: {
+          Authorization: `Bearer ${process.env.UPSTREAM_API_KEY}`,
+        },
+      },
+    },
+  ],
+});
+```
+
+For non-`GET` proxy routes, AgentPay forwards a JSON body that includes the
+incoming request body plus `query`, `endpoint`, `path`, and `intentId` when the
+call came from an intent execution flow.
 
 If you want an explicit preflight step in your own app, call the validators
 directly:
@@ -180,7 +362,7 @@ registerAgentPayRoutes(app, {
     gatewayUrl: "http://localhost:3000",
     rustServiceUrl: "",
     facilitatorUrl: "https://facilitator.stellar-x402.org",
-    network: "stellar-testnet",
+    network: NETWORK_IDS.STELLAR_TESTNET,
     walletAddress: process.env.WALLET_ADDRESS,
     asset: {
       address: "native",
@@ -326,6 +508,7 @@ agentpay-gateway/
 │   └── lib/
 ├── scripts/
 ├── tests/
+├── production-tests/
 ├── docs/
 ├── server.js
 ├── client.js
@@ -359,10 +542,30 @@ STELLAR_SECRET_KEY=<payer secret key>
 AUTO_FUND_TESTNET_ACCOUNTS=true
 ```
 
+Merchant backend variables for automatic payee trustline setup:
+
+```bash
+AUTO_CREATE_PAYEE_TRUSTLINE=true
+MERCHANT_WALLET_SECRET_KEY=<merchant/payee stellar secret key>
+MERCHANT_CLASSIC_ASSET=USDC
+```
+
+For custom classic Stellar assets not present in the built-in registry:
+
+```bash
+MERCHANT_ASSET_CODE=<classic asset code>
+MERCHANT_ASSET_ISSUER=<classic stellar issuer address>
+```
+
 Notes:
 
 - `X402_ASSET=USDC` is the primary stablecoin path in this repo.
 - `X402_ASSET=USDC` requires the payer to already have the right trustline and token balance.
+- if the payee wallet must auto-establish a trustline, configure
+  `AUTO_CREATE_PAYEE_TRUSTLINE=true` plus
+  `MERCHANT_WALLET_SECRET_KEY` and either
+  `MERCHANT_CLASSIC_ASSET=USDC` for a built-in known asset or
+  `MERCHANT_ASSET_CODE`/`MERCHANT_ASSET_ISSUER` for a custom classic asset
 - `X402_ASSET=native` remains available as the simpler XLM path.
 - `RUST_SERVICE_URL` is optional. If unset, handlers fall back to local logic.
 - `STELLAR_SECRET_KEY` is still supported as a fallback/dev path for the CLI.
@@ -420,10 +623,21 @@ Quality checks:
 ```bash
 yarn lint
 yarn test
+yarn test:production
 yarn check
 yarn build
 yarn smoke
 ```
+
+`yarn test:production` runs the live Stellar testnet verification suite in
+[production-tests/stellar-testnet.test.mjs](/home/kelly-musk/agentpay-server/production-tests/stellar-testnet.test.mjs).
+It is intentionally separate from `yarn test` because it performs real network
+calls and real Stellar testnet payments. The suite is self-contained and does
+not require local env secrets because it uses:
+
+- a hardcoded testnet merchant wallet address
+- a temporary in-process gateway
+- auto-funded ephemeral testnet payer accounts for the live payment steps
 
 ## Package Exports
 
@@ -508,6 +722,19 @@ Paid compute endpoint.
     "network": "stellar-testnet",
     "asset": "USDC",
     "amount": "0.02",
+    "receipt": {
+      "transactionHash": "70c1427f87e740d4706d32ff8f7b53667f6a0b0c399349fde5e434daed743b5d",
+      "ledger": 123456,
+      "payer": "GDJ6ODLWKV26CTH5I5BD74HDBE6TSN3WI3U46AQ6ZSIU6VFDBUEEZCQD",
+      "payee": "GD3PXXADIXMWGINT2LK3Q45SLI3HRCRA2I7NDOTXXTGNXO7GDYKI4SK7",
+      "amount": {
+        "display": "0.02",
+        "baseUnits": "200000"
+      },
+      "asset": {
+        "symbol": "USDC"
+      }
+    },
     "settlement": {
       "success": true,
       "payer": "GDJ6ODLWKV26CTH5I5BD74HDBE6TSN3WI3U46AQ6ZSIU6VFDBUEEZCQD",
@@ -555,6 +782,12 @@ yarn cli payer:check
 X402_ASSET=USDC yarn start
 ```
 
+The gateway requires an explicit network:
+
+```bash
+X402_NETWORK=stellar-testnet X402_ASSET=USDC yarn start
+```
+
 5. In another terminal, make a paid request:
 
 ```bash
@@ -567,6 +800,204 @@ yarn cli ai --query "hello agent"
 ```bash
 curl http://localhost:3000/ready
 ```
+
+## Production-Style Verification
+
+This is the closest step-by-step verification flow for a production-shaped
+deployment in the current repo. It is still based on Stellar testnet unless you
+point the gateway at a supported production network and production-grade
+services.
+
+1. Install dependencies and run repo checks:
+
+```bash
+yarn install
+yarn lint
+yarn test
+yarn test:production
+yarn build
+```
+
+If you want the fastest single-command production-style verification, run:
+
+```bash
+yarn test:production
+```
+
+That suite covers:
+
+- gateway startup
+- `/health`
+- `/ready`
+- real `402` challenge generation
+- real direct-route payment on Stellar testnet
+- real intent creation
+- real paid intent execution on Stellar testnet
+- Horizon validation of the returned transaction hash
+
+It currently uses the native XLM path on Stellar testnet because that is the
+most stable self-contained live verification route and does not require local
+merchant secrets or token trustline setup.
+
+2. Prepare operator env for the gateway:
+
+```bash
+export X402_NETWORK=stellar-testnet
+export X402_ASSET=USDC
+export WALLET_ADDRESS=<merchant public key>
+```
+
+If the merchant backend should automatically establish the payee trustline for a
+known classic asset:
+
+```bash
+export AUTO_CREATE_PAYEE_TRUSTLINE=true
+export MERCHANT_WALLET_SECRET_KEY=<merchant/payee secret key>
+export MERCHANT_CLASSIC_ASSET=USDC
+```
+
+For a custom classic asset instead of a built-in registry asset:
+
+```bash
+export MERCHANT_ASSET_CODE=<classic asset code>
+export MERCHANT_ASSET_ISSUER=<classic issuer address>
+```
+
+3. Start the gateway:
+
+```bash
+yarn start
+```
+
+4. Verify operator health and readiness:
+
+```bash
+curl http://localhost:3000/health
+curl http://localhost:3000/ready
+curl http://localhost:3000/capabilities
+```
+
+Expected:
+
+- `/health` returns basic runtime status
+- `/ready` returns `200` and all checks as healthy
+- if the payee cannot receive the configured token, `/ready` should show a
+  `missing_trustline` status and an operator `nextStep`
+
+5. Verify the payer wallet is ready:
+
+```bash
+yarn cli payer:check
+```
+
+Expected:
+
+- payer exists on the selected network
+- payer has native XLM for fees
+- payer has the correct token balance and trustline for non-native assets
+
+6. Run a direct paid route:
+
+```bash
+yarn cli ai --query "production style verification"
+```
+
+Expected:
+
+- request succeeds
+- response contains `payment.status = "verified"`
+- response contains a structured `payment.receipt`
+- receipt includes:
+  - `transactionHash`
+  - `ledger`
+  - `payer`
+  - `payee`
+  - `amount.display`
+  - `amount.baseUnits`
+  - `asset`
+  - `explorer.transaction`
+
+7. Run the intent lifecycle:
+
+```bash
+yarn cli intent:create --endpoint ai --query "intent verification"
+yarn cli intent:list
+yarn cli intent:execute --id intent_...
+```
+
+Expected:
+
+- intent is created with the resolved policy result
+- paid intents return `accepts`
+- free/bypassed intents return `payment.status = "not_required"`
+- execution returns a structured receipt when payment occurs
+
+8. Verify usage and revenue reporting:
+
+```bash
+curl http://localhost:3000/stats
+```
+
+Expected:
+
+- request count increments
+- revenue reflects the settled payment asset/amount
+
+9. Validate the blockchain receipt externally:
+
+- open `payment.receipt.explorer.transaction`
+- confirm the transaction hash, ledger, payer, payee, and amount match the API
+  response
+
+10. Verify provider-grade behavior if using embedded mode:
+
+- restart the host app
+- confirm `/ready` returns healthy after restart
+- if using Postgres-backed storage, confirm intents and usage survive process
+  restart
+
+This flow is the right production-style checklist for the repo today, but it is
+still not a substitute for the broader work tracked in
+[docs/PRODUCTION_READINESS.md](/home/kelly-musk/agentpay-server/docs/PRODUCTION_READINESS.md).
+
+## Verified Progress
+
+As of April 8, 2026, the repo has been verified with both repo-level checks and
+live Stellar testnet payments.
+
+Verified in code:
+
+- `yarn lint`
+- `yarn test`
+- `yarn build`
+
+Verified live on Stellar testnet:
+
+- `/health`, `/ready`, and `/capabilities` returned expected runtime metadata
+- a direct paid `/ai` request completed successfully with a confirmed on-chain receipt
+- an intent was created and then executed successfully through the paid intent flow
+- a returned transaction hash was validated directly against Horizon
+
+Verified live receipts included:
+
+- `transactionHash`
+- `ledger`
+- `ledgerCloseTime`
+- `payer`
+- `payee`
+- `amount.display`
+- `amount.baseUnits`
+- `explorer.transaction`
+- raw XDR fields for reconciliation
+
+One real production-style defect was found and fixed during that live pass:
+
+- `POST /intents` for built-in GET endpoints was not correctly bridging the
+  intent query into the policy evaluation path
+- that bug is now fixed in
+  [server/provider.js](/home/kelly-musk/agentpay-server/server/provider.js)
+- regression coverage was added in
+  [tests/provider.test.mjs](/home/kelly-musk/agentpay-server/tests/provider.test.mjs)
 
 ## Request Lifecycle
 
