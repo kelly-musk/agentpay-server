@@ -6,6 +6,7 @@ test("root package entry exports provider helpers", async () => {
 
   assert.equal(typeof sdk.registerAgentPayRoutes, "function");
   assert.equal(typeof sdk.createAgentPayProvider, "function");
+  assert.equal(typeof sdk.CONTRACT_VERSIONS, "object");
   assert.equal(typeof sdk.NETWORK_IDS, "object");
   assert.equal(typeof sdk.SUPPORTED_NETWORK_IDS?.length, "number");
   assert.equal(typeof sdk.CLASSIC_ASSET_IDS, "object");
@@ -24,6 +25,7 @@ test("server entry exports provider and payment helpers", async () => {
   const serverSdk = await import("../server/index.js");
 
   assert.equal(typeof serverSdk.registerAgentPayRoutes, "function");
+  assert.equal(typeof serverSdk.CONTRACT_VERSIONS, "object");
   assert.equal(typeof serverSdk.NETWORK_IDS, "object");
   assert.equal(typeof serverSdk.CLASSIC_ASSET_IDS, "object");
   assert.equal(typeof serverSdk.isSupportedNetworkId, "function");
@@ -37,4 +39,6 @@ test("client entry exports payFetch", async () => {
   const clientSdk = await import("../client/index.js");
 
   assert.equal(typeof clientSdk.payFetch, "function");
+  assert.equal(typeof clientSdk.resolveAgentPayService, "function");
+  assert.equal(typeof clientSdk.selectAgentPayRoute, "function");
 });

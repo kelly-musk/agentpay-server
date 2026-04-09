@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  CONTRACT_VERSIONS,
   CLASSIC_ASSET_IDS,
   NETWORK_IDS,
   checkPayeeAssetReadiness,
@@ -57,6 +58,7 @@ test("exposes capability metadata for clients", () => {
   const paymentContext = createPaymentContext(config);
   const capabilities = paymentContext.getCapabilities();
 
+  assert.equal(capabilities.version, CONTRACT_VERSIONS.CAPABILITIES);
   assert.equal(capabilities.protocol, "x402-stellar");
   assert.equal(capabilities.asset.symbol, "XLM");
   assert.equal(capabilities.endpoints.length, 3);
@@ -67,8 +69,99 @@ test("builds discovery resources for agents", () => {
   const resources = paymentContext.getDiscoveryResources();
 
   assert.equal(resources.length, 3);
+  assert.equal(resources[0].version, CONTRACT_VERSIONS.DISCOVERY);
   assert.equal(resources[0].resource, "http://localhost:3000/ai");
   assert.equal(resources[0].accepts[0].scheme, "exact");
+});
+
+test("builds a versioned provider manifest for ecosystem tooling", () => {
+  const paymentContext = createPaymentContext({
+    ...config,
+    provider: {
+      id: "acme",
+      name: "Acme Data",
+      supportEmail: "support@example.com",
+    },
+    service: {
+      id: "market-feed",
+      name: "Market Feed",
+      category: "financial-data",
+      version: "2026.04.0",
+    },
+  });
+  const manifest = paymentContext.getServiceManifest();
+
+  assert.equal(manifest.manifestVersion, CONTRACT_VERSIONS.MANIFEST);
+  assert.equal(manifest.protocol, "x402-stellar");
+  assert.equal(manifest.provider.id, "acme");
+  assert.equal(manifest.provider.name, "Acme Data");
+  assert.equal(manifest.provider.supportEmail, "support@example.com");
+  assert.equal(manifest.service.id, "market-feed");
+  assert.equal(manifest.service.name, "Market Feed");
+  assert.equal(manifest.service.category, "financial-data");
+  assert.equal(manifest.service.version, "2026.04.0");
+  assert.equal(manifest.compatibility.networks[0], "stellar-testnet");
+  assert.equal(manifest.compatibility.assets[0].symbol, "XLM");
+  assert.match(manifest.links.manifest, /\.well-known\/agentpay\.json$/);
+  assert.equal(manifest.routes.length, 3);
+  assert.equal(manifest.routes[0].service.billingUnit, "request");
+});
+
+test("builds a registry-friendly export shape for discovery systems", () => {
+  const endpointCatalog = createEndpointCatalog({
+    search: {
+      id: "search",
+      path: "/search",
+      method: "POST",
+      description: "Paid search API",
+      basePriceUsd: "0.05",
+      category: "search-api",
+      billingUnit: "query",
+      audience: ["agents", "developers"],
+      tags: ["search", "retrieval"],
+      useCases: ["research"],
+    },
+    inference: {
+      id: "inference",
+      path: "/inference",
+      method: "POST",
+      description: "Paid inference API",
+      basePriceUsd: "0.12",
+      category: "ai-inference",
+      billingUnit: "request",
+      audience: ["agents"],
+      tags: ["ai", "generation"],
+      useCases: ["summarization"],
+    },
+  });
+  const paymentContext = createPaymentContext({
+    ...config,
+    provider: {
+      id: "registry_demo",
+      name: "Registry Demo Provider",
+    },
+    service: {
+      id: "registry_demo_service",
+      name: "Registry Demo Service",
+      category: "multi-service",
+    },
+    endpointCatalog,
+  });
+  const listing = paymentContext.getRegistryExport();
+
+  assert.equal(listing.listingVersion, CONTRACT_VERSIONS.REGISTRY_EXPORT);
+  assert.equal(listing.provider.id, "registry_demo");
+  assert.equal(listing.service.id, "registry_demo_service");
+  assert.equal(listing.network, "stellar-testnet");
+  assert.equal(listing.asset.symbol, "XLM");
+  assert.equal(listing.routes.length, 2);
+  assert.equal(listing.categories.includes("search-api"), true);
+  assert.equal(listing.categories.includes("ai-inference"), true);
+  assert.equal(listing.tags.includes("search"), true);
+  assert.equal(listing.tags.includes("generation"), true);
+  assert.match(listing.manifestUrl, /\.well-known\/agentpay\.json$/);
+  assert.match(listing.capabilitiesUrl, /\/capabilities$/);
+  assert.equal(listing.routes[0].billingUnit !== undefined, true);
 });
 
 test("exposes paid agent service metadata and endpoint-specific output schemas", () => {
@@ -182,6 +275,7 @@ test("creates a structured blockchain payment receipt", () => {
   });
 
   assert.equal(receipt.transactionHash, "abc123hash");
+  assert.equal(receipt.version, CONTRACT_VERSIONS.RECEIPT);
   assert.equal(receipt.ledger, 123456);
   assert.equal(receipt.payer, "GCPAYER123");
   assert.equal(receipt.payee, config.walletAddress);

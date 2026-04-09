@@ -41,6 +41,58 @@ That makes it useful for many downstream services, including:
 - tool execution
 - future backend microservices
 
+## Current Progress
+
+AgentPay is currently strongest in the **Paid agent services / APIs** wedge.
+
+Implemented today:
+
+- provider SDK for embedding paid routes into Express apps
+- standalone gateway mode
+- `402 -> pay -> verify -> settle` flow on Stellar
+- direct paid routes and intent-based paid execution
+- structured blockchain receipts
+- versioned provider manifest endpoint
+- capabilities and discovery endpoints
+- route metadata for category, billing unit, audience, tags, use cases, and schemas
+- paid API templates for:
+  - search
+  - market/news data
+  - scraping/data extraction
+  - AI inference
+- storage adapters for memory, file, SQLite, and Postgres
+- readiness, stats, and production-style test coverage
+
+Partially implemented:
+
+- infrastructure / ecosystem tooling
+- provider publishing and service discovery surfaces
+- provider-grade operations and storage confidence
+- versioned public contract layer for manifest, registry export, capabilities, discovery, and receipts
+
+Planned, not fully implemented yet:
+
+- provider manifest endpoint
+- bazaar / registry export format
+- versioned ecosystem contracts
+- consumer-side service resolution from manifests
+- trust and reputation layers
+
+So the product should currently be described as:
+
+- strong for paid agent APIs
+- increasingly infrastructure-shaped
+- not yet a fully realized ecosystem tooling platform
+
+Reference docs:
+
+- paid agent APIs implementation:
+  [docs/PAID_AGENT_APIS_IMPLEMENTATION.md](/home/kelly-musk/agentpay-server/docs/PAID_AGENT_APIS_IMPLEMENTATION.md)
+- ecosystem tooling architecture target:
+  [docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md](/home/kelly-musk/agentpay-server/docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md)
+- ecosystem tooling implementation plan:
+  [docs/INFRASTRUCTURE_ECOSYSTEM_TOOLING_IMPLEMENTATION.md](/home/kelly-musk/agentpay-server/docs/INFRASTRUCTURE_ECOSYSTEM_TOOLING_IMPLEMENTATION.md)
+
 ## Integration Modes
 
 AgentPay can now be used in two ways:
@@ -404,6 +456,79 @@ It shows how to expose a paid search endpoint with:
 - dynamic pricing by query complexity
 - input/output schemas in discovery and `402` responses
 
+Additional first-class paid-agent-API templates are available for:
+
+- [examples/paid-market-data-provider.js](/home/kelly-musk/agentpay-server/examples/paid-market-data-provider.js)
+- [examples/paid-scraper-provider.js](/home/kelly-musk/agentpay-server/examples/paid-scraper-provider.js)
+- [examples/paid-inference-provider.js](/home/kelly-musk/agentpay-server/examples/paid-inference-provider.js)
+
+For ecosystem tooling and provider publishing, AgentPay now also exposes a
+versioned manifest endpoint:
+
+```text
+GET /.well-known/agentpay.json
+```
+
+That manifest is intended to become the provider-facing publishing contract for:
+
+- registries
+- marketplaces
+- discovery tooling
+- agent platforms
+
+For flatter registry ingestion and listing systems, AgentPay also exposes:
+
+```text
+GET /registry/export
+```
+
+This export is designed for:
+
+- service directories
+- bazaars
+- marketplace backends
+- compatibility crawlers
+
+It provides a more listable surface than the manifest, including:
+
+- provider summary
+- service summary
+- network and asset compatibility
+- categories and tags
+- flattened route metadata
+- links back to manifest, capabilities, discovery, readiness, and health
+
+Consumer SDKs can now resolve those publishing surfaces programmatically:
+
+```js
+import {
+  resolveAgentPayService,
+  selectAgentPayRoute,
+} from "agentpay-gateway/client";
+
+const service = await resolveAgentPayService("https://api.example.com");
+const route = selectAgentPayRoute(service, {
+  category: "search-api",
+  audience: "agents",
+});
+```
+
+That is the first consumer-side service resolution layer built on top of:
+
+- `/.well-known/agentpay.json`
+- `/registry/export`
+- `/capabilities`
+- `/discovery/resources`
+
+Those surfaces are now explicitly versioned public contracts. The SDK exports
+`CONTRACT_VERSIONS` so downstream consumers and tests can pin against:
+
+- manifest version
+- registry export version
+- capabilities version
+- discovery version
+- receipt version
+
 Example:
 
 ```js
@@ -730,6 +855,15 @@ configured storage backend is not healthy.
 ### `GET /capabilities`
 
 Machine-readable endpoint and payment metadata for agent integrations.
+
+### `GET /.well-known/agentpay.json`
+
+Versioned provider manifest for ecosystem tooling, discovery systems, and
+registry-style integrations.
+
+### `GET /registry/export`
+
+Versioned registry/listing export for directories, bazaars, and crawlers.
 
 ### `GET /discovery/resources`
 

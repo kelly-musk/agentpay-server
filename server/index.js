@@ -16,6 +16,7 @@ export {
 } from "./provider.js";
 
 export {
+  CONTRACT_VERSIONS,
   NETWORK_IDS,
   SUPPORTED_NETWORK_IDS,
   CLASSIC_ASSET_IDS,

@@ -32,6 +32,8 @@ test("registers the public gateway routes", () => {
     "/health",
     "/ready",
     "/capabilities",
+    "/.well-known/agentpay.json",
+    "/registry/export",
     "/discovery/resources",
     "/stats",
     "/intents",

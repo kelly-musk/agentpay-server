@@ -31,8 +31,15 @@ retries with `x-payment`, and prints the final API response.
 - [client.js](/home/kelly-musk/agentpay-server/client.js): thin root entrypoint that boots the client folder.
 - [package.json](/home/kelly-musk/agentpay-server/package.json): scripts, metadata, and dependencies.
 - [README.md](/home/kelly-musk/agentpay-server/README.md): product-facing project overview.
+- [docs/PAID_AGENT_APIS_IMPLEMENTATION.md](/home/kelly-musk/agentpay-server/docs/PAID_AGENT_APIS_IMPLEMENTATION.md): practical guide for the currently implementable paid agent services / APIs wedge.
+- [docs/INFRASTRUCTURE_ECOSYSTEM_TOOLING_IMPLEMENTATION.md](/home/kelly-musk/agentpay-server/docs/INFRASTRUCTURE_ECOSYSTEM_TOOLING_IMPLEMENTATION.md): future-facing implementation guide for the infrastructure / ecosystem tooling wedge.
+- [docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md](/home/kelly-musk/agentpay-server/docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md): target-state source of truth for the infrastructure/ecosystem-tooling direction.
+- [docs/ROADMAP_ECOSYSTEM_TOOLING.md](/home/kelly-musk/agentpay-server/docs/ROADMAP_ECOSYSTEM_TOOLING.md): roadmap derived from the architecture reference.
 - [examples/express-provider.js](/home/kelly-musk/agentpay-server/examples/express-provider.js): copyable Express integration example.
 - [examples/paid-search-provider.js](/home/kelly-musk/agentpay-server/examples/paid-search-provider.js): paid-agent-API template for a search service.
+- [examples/paid-market-data-provider.js](/home/kelly-musk/agentpay-server/examples/paid-market-data-provider.js): paid market/news data template.
+- [examples/paid-scraper-provider.js](/home/kelly-musk/agentpay-server/examples/paid-scraper-provider.js): paid scraping/data extraction template.
+- [examples/paid-inference-provider.js](/home/kelly-musk/agentpay-server/examples/paid-inference-provider.js): paid AI inference template.
 
 ### Server
 

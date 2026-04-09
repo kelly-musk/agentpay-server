@@ -20,6 +20,7 @@ import {
 } from "./logger.js";
 import { assertValidPostgresIdentifier } from "./postgres.js";
 import {
+  CONTRACT_VERSIONS,
   createPaymentContext,
   loadGatewayConfig,
   requirePaymentWith,
@@ -425,6 +426,46 @@ function registerPublicRoutes(app, provider) {
     res.json(paymentContext.getCapabilities());
   });
 
+  app.get("/.well-known/agentpay.json", (req, res) => {
+    res.json(paymentContext.getServiceManifest());
+  });
+
+  app.get("/registry/export", (req, res) => {
+    const category = req.query.category ? String(req.query.category) : undefined;
+    const tag = req.query.tag ? String(req.query.tag) : undefined;
+    const audience = req.query.audience ? String(req.query.audience) : undefined;
+    const listing = paymentContext.getRegistryExport();
+
+    let routes = listing.routes;
+
+    if (category) {
+      routes = routes.filter((route) => route.category === category);
+    }
+
+    if (tag) {
+      routes = routes.filter((route) => route.tags.includes(tag));
+    }
+
+    if (audience) {
+      routes = routes.filter((route) => route.audience.includes(audience));
+    }
+
+    const filteredCategories = Array.from(new Set(routes.map((route) => route.category)));
+    const filteredTags = Array.from(new Set(routes.flatMap((route) => route.tags)));
+
+    res.json({
+      ...listing,
+      categories: filteredCategories,
+      tags: filteredTags,
+      routes,
+      filters: {
+        category: category || null,
+        tag: tag || null,
+        audience: audience || null,
+      },
+    });
+  });
+
   app.get("/discovery/resources", (req, res) => {
     const type = req.query.type ? String(req.query.type) : undefined;
     const limit = req.query.limit ? Number.parseInt(String(req.query.limit), 10) : undefined;
@@ -441,6 +482,7 @@ function registerPublicRoutes(app, provider) {
     const pagedItems = items.slice(start, end);
 
     res.json({
+      version: CONTRACT_VERSIONS.DISCOVERY,
       x402Version: 1,
       items: pagedItems,
       pagination: {

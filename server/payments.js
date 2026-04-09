@@ -25,6 +25,13 @@ import {
 } from "./pricing.js";
 
 const DISCOVERY_UPDATED_AT = Date.now();
+export const CONTRACT_VERSIONS = Object.freeze({
+  RECEIPT: "1.0.0",
+  CAPABILITIES: "1.0.0",
+  MANIFEST: "1.0.0",
+  REGISTRY_EXPORT: "1.0.0",
+  DISCOVERY: "1.0.0",
+});
 export const NETWORK_IDS = Object.freeze({
   BASE_SEPOLIA: "base-sepolia",
   BASE_MAINNET: "base",
@@ -452,6 +459,7 @@ export function createPaymentReceipt(config, paymentRequirements, details = {}) 
     : { transaction: undefined, account: undefined };
 
   return {
+    version: CONTRACT_VERSIONS.RECEIPT,
     receiptId: transactionHash ? `${config.network}:${transactionHash}` : null,
     status: details.status || "confirmed",
     confirmed: details.confirmed ?? true,
@@ -521,6 +529,35 @@ function buildEndpointServiceMetadata(endpoint) {
     examples: Array.isArray(endpoint.examples) ? endpoint.examples : [],
     inputSchema: endpoint.inputSchema || null,
     outputSchema: endpoint.outputSchema || null,
+  };
+}
+
+function getProviderMetadata(config) {
+  const provider = config.provider || {};
+
+  return {
+    id: provider.id || "agentpay-provider",
+    name: provider.name || "AgentPay Provider",
+    description: provider.description || "AgentPay-compatible paid service provider",
+    websiteUrl: provider.websiteUrl || null,
+    supportUrl: provider.supportUrl || null,
+    supportEmail: provider.supportEmail || null,
+  };
+}
+
+function getServiceMetadata(config, endpointCatalog) {
+  const service = config.service || {};
+
+  return {
+    id: service.id || "agentpay-service",
+    name: service.name || "AgentPay Service",
+    description: service.description || "Paid agent service powered by AgentPay",
+    version: service.version || "1.0.0",
+    category: service.category || "paid-agent-api",
+    tags: Array.isArray(service.tags) ? service.tags : [],
+    audience: Array.isArray(service.audience) ? service.audience : ["agents", "developers"],
+    documentationUrl: service.documentationUrl || null,
+    routeCount: Object.keys(endpointCatalog).length,
   };
 }
 
@@ -1040,6 +1077,7 @@ export function createPaymentContext(rawConfig) {
 
   function getCapabilities() {
     return {
+      version: CONTRACT_VERSIONS.CAPABILITIES,
       service: "agentpay-gateway",
       protocol: "x402-stellar",
       network: config.network,
@@ -1057,10 +1095,97 @@ export function createPaymentContext(rawConfig) {
     };
   }
 
+  function getServiceManifest() {
+    const provider = getProviderMetadata(config);
+    const service = getServiceMetadata(config, endpointCatalog);
+    const endpoints = listEndpointsFromCatalog(endpointCatalog);
+    const manifestUrl = `${config.gatewayUrl}/.well-known/agentpay.json`;
+
+    return {
+      manifestVersion: CONTRACT_VERSIONS.MANIFEST,
+      generatedAt: new Date(DISCOVERY_UPDATED_AT).toISOString(),
+      protocol: "x402-stellar",
+      provider,
+      service,
+      compatibility: {
+        networks: [config.network],
+        assets: [
+          {
+            address: config.asset.address,
+            symbol: config.asset.symbol,
+            displayName: config.asset.displayName,
+            decimals: config.asset.decimals,
+          },
+        ],
+      },
+      links: {
+        manifest: manifestUrl,
+        capabilities: `${config.gatewayUrl}/capabilities`,
+        discovery: `${config.gatewayUrl}/discovery/resources`,
+        readiness: `${config.gatewayUrl}/ready`,
+        health: `${config.gatewayUrl}/health`,
+      },
+      routes: endpoints.map((endpoint) => ({
+        id: endpoint.id,
+        path: endpoint.path,
+        method: endpoint.method,
+        description: endpoint.description,
+        basePriceUsd: endpoint.basePriceUsd,
+        service: buildEndpointServiceMetadata(endpoint),
+      })),
+    };
+  }
+
+  function getRegistryExport() {
+    const provider = getProviderMetadata(config);
+    const service = getServiceMetadata(config, endpointCatalog);
+    const manifest = getServiceManifest();
+    const endpoints = listEndpointsFromCatalog(endpointCatalog);
+
+    return {
+      listingVersion: CONTRACT_VERSIONS.REGISTRY_EXPORT,
+      exportedAt: new Date(DISCOVERY_UPDATED_AT).toISOString(),
+      provider,
+      service,
+      protocol: "x402-stellar",
+      network: config.network,
+      asset: {
+        address: config.asset.address,
+        symbol: config.asset.symbol,
+        displayName: config.asset.displayName,
+        decimals: config.asset.decimals,
+      },
+      manifestUrl: manifest.links.manifest,
+      capabilitiesUrl: manifest.links.capabilities,
+      discoveryUrl: manifest.links.discovery,
+      readinessUrl: manifest.links.readiness,
+      healthUrl: manifest.links.health,
+      categories: Array.from(new Set(endpoints.map((endpoint) => endpoint.category || "general"))),
+      tags: Array.from(
+        new Set(
+          endpoints.flatMap((endpoint) => (Array.isArray(endpoint.tags) ? endpoint.tags : [])),
+        ),
+      ),
+      routes: endpoints.map((endpoint) => ({
+        id: endpoint.id,
+        path: endpoint.path,
+        method: endpoint.method,
+        description: endpoint.description,
+        basePriceUsd: endpoint.basePriceUsd,
+        category: endpoint.category || "general",
+        billingUnit: endpoint.billingUnit || "request",
+        audience: Array.isArray(endpoint.audience) ? endpoint.audience : ["agents", "developers"],
+        tags: Array.isArray(endpoint.tags) ? endpoint.tags : [],
+        useCases: Array.isArray(endpoint.useCases) ? endpoint.useCases : [],
+      })),
+    };
+  }
+
   function getDiscoveryResources() {
     return listEndpointsFromCatalog(endpointCatalog).map((endpoint) => ({
       resource: `${config.gatewayUrl}${endpoint.path}`,
       type: "http",
+      version: CONTRACT_VERSIONS.DISCOVERY,
       x402Version: 1,
       accepts: [
         buildRequirementsForResource(`${config.gatewayUrl}${endpoint.path}`, endpoint.id),
@@ -1118,6 +1243,8 @@ export function createPaymentContext(rawConfig) {
     buildRequirements,
     buildRequirementsForResource,
     getCapabilities,
+    getServiceManifest,
+    getRegistryExport,
     getDiscoveryResources,
     checkPayeeAssetReadiness: () => checkPayeeAssetReadiness(config),
   };
