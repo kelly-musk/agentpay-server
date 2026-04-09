@@ -86,6 +86,8 @@ So the product should currently be described as:
 
 Reference docs:
 
+- **Product Requirements Document (PRD):**
+  [Google Docs](https://docs.google.com/document/d/1BOtask_WttU2Oni6gIoFt5Mk9DrrWbRB/edit?usp=sharing&ouid=100722320761073170367&rtpof=true&sd=true) | [PRD.md](PRD.md)
 - paid agent APIs implementation:
   [docs/PAID_AGENT_APIS_IMPLEMENTATION.md](/home/kelly-musk/agentpay-server/docs/PAID_AGENT_APIS_IMPLEMENTATION.md)
 - ecosystem tooling architecture target:
