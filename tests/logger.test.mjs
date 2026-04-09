@@ -43,7 +43,7 @@ test("aggregates usage stats from in-memory storage", async () => {
 });
 
 test("supports sqlite-backed usage storage", async () => {
-  const tempRoot = await mkdtemp(join(tmpdir(), "agentpay-usage-"));
+  const tempRoot = await mkdtemp(join(tmpdir(), "stellar-oxide-gateway-usage-"));
   const sqliteFile = join(tempRoot, "usage.db");
 
   try {

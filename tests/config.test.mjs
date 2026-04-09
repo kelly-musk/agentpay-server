@@ -10,7 +10,7 @@ async function loadConfigModule(xdgConfigHome) {
 }
 
 test("persists CLI config in the XDG config directory", async () => {
-  const tempRoot = await mkdtemp(join(tmpdir(), "agentpay-config-"));
+  const tempRoot = await mkdtemp(join(tmpdir(), "stellar-oxide-gateway-config-"));
 
   try {
     const { getConfigFilePath, loadConfig, saveConfig } = await loadConfigModule(tempRoot);
@@ -25,7 +25,7 @@ test("persists CLI config in the XDG config directory", async () => {
     const stored = await loadConfig();
     const raw = await readFile(getConfigFilePath(), "utf-8");
 
-    assert.equal(getConfigFilePath(), join(tempRoot, "agentpay", "config.json"));
+    assert.equal(getConfigFilePath(), join(tempRoot, "stellar-oxide-gateway", "config.json"));
     assert.equal(stored.payerPublicKey, "GTEST");
     assert.match(raw, /"asset": "USDC"/);
   } finally {
@@ -35,7 +35,7 @@ test("persists CLI config in the XDG config directory", async () => {
 });
 
 test("prefers environment overrides in effective config", async () => {
-  const tempRoot = await mkdtemp(join(tmpdir(), "agentpay-config-"));
+  const tempRoot = await mkdtemp(join(tmpdir(), "stellar-oxide-gateway-config-"));
 
   process.env.XDG_CONFIG_HOME = tempRoot;
   process.env.X402_NETWORK = "stellar";

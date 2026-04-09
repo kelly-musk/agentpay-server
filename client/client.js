@@ -40,20 +40,20 @@ function printUsage() {
   console.log(`${packageJson.name} v${packageJson.version}`);
   console.log("");
   console.log("Usage:");
-  console.log("  agentpay setup");
-  console.log("  agentpay setup --secret-key S... --network stellar-testnet --gateway-url http://localhost:3000 --asset USDC");
-  console.log("  agentpay whoami");
-  console.log("  agentpay doctor");
-  console.log("  agentpay payer:check");
-  console.log("  agentpay intent:create --endpoint ai --query \"hello agent\"");
-  console.log("  agentpay intent:list");
-  console.log("  agentpay intent:get --id intent_...");
-  console.log("  agentpay intent:execute --id intent_...");
-  console.log("  agentpay ai --query \"hello agent\"");
-  console.log("  agentpay data --query \"market data\"");
-  console.log("  agentpay compute --query \"run simulation\"");
-  console.log("  agentpay logout");
-  console.log("  agentpay reset");
+  console.log("  stellar-oxide-gateway setup");
+  console.log("  stellar-oxide-gateway setup --secret-key S... --network stellar-testnet --gateway-url http://localhost:3000 --asset USDC");
+  console.log("  stellar-oxide-gateway whoami");
+  console.log("  stellar-oxide-gateway doctor");
+  console.log("  stellar-oxide-gateway payer:check");
+  console.log("  stellar-oxide-gateway intent:create --endpoint ai --query \"hello agent\"");
+  console.log("  stellar-oxide-gateway intent:list");
+  console.log("  stellar-oxide-gateway intent:get --id intent_...");
+  console.log("  stellar-oxide-gateway intent:execute --id intent_...");
+  console.log("  stellar-oxide-gateway ai --query \"hello agent\"");
+  console.log("  stellar-oxide-gateway data --query \"market data\"");
+  console.log("  stellar-oxide-gateway compute --query \"run simulation\"");
+  console.log("  stellar-oxide-gateway logout");
+  console.log("  stellar-oxide-gateway reset");
 }
 
 function createMutedInterface() {
@@ -179,7 +179,7 @@ async function runWhoAmI() {
   const config = await loadConfig();
 
   if (!config.payerPublicKey) {
-    throw new Error("No stored wallet found. Run `agentpay setup` first.");
+    throw new Error("No stored wallet found. Run `stellar-oxide-gateway setup` first.");
   }
 
   printJson({
@@ -275,7 +275,7 @@ async function runDoctor() {
   } else {
     report.payer = {
       status: "missing_credentials",
-      nextStep: "Run `agentpay setup` or export STELLAR_SECRET_KEY.",
+      nextStep: "Run `stellar-oxide-gateway setup` or export STELLAR_SECRET_KEY.",
     };
   }
 
@@ -315,7 +315,7 @@ async function runReset() {
   }
 
   await clearConfig();
-  console.log("Local AgentPay config and stored secret were removed.");
+  console.log("Local Stellar Oxide Gateway config and stored secret were removed.");
 }
 
 async function runStoredPayerCheck() {

@@ -5,16 +5,16 @@
 > wedge. It should be read as an implementation plan and reference, not as proof
 > that the full wedge already exists in the product today.
 
-This guide explains how to implement AgentPay as **infrastructure / ecosystem
+This guide explains how to implement Stellar Oxide Gateway as **infrastructure / ecosystem
 tooling**, not just as a single paid API gateway.
 
 It is the practical companion to:
 
-- [docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md](/home/kelly-musk/agentpay-server/docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md)
-- [docs/ROADMAP_ECOSYSTEM_TOOLING.md](/home/kelly-musk/agentpay-server/docs/ROADMAP_ECOSYSTEM_TOOLING.md)
+- [docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md](/home/kelly-musk/stellar-oxide-gateway-server/docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md)
+- [docs/ROADMAP_ECOSYSTEM_TOOLING.md](/home/kelly-musk/stellar-oxide-gateway-server/docs/ROADMAP_ECOSYSTEM_TOOLING.md)
 
 This document focuses on what developers and product builders should actually
-build if they want AgentPay to function as ecosystem infrastructure.
+build if they want Stellar Oxide Gateway to function as ecosystem infrastructure.
 
 ## Current State vs Target State
 
@@ -35,12 +35,12 @@ Not fully implemented yet:
 Now implemented at a foundation level:
 
 - versioned provider manifest endpoint:
-  - `GET /.well-known/agentpay.json`
+  - `GET /.well-known/stellar-oxide-gateway.json`
 - registry-friendly listing export:
   - `GET /registry/export`
 - consumer-side service resolution helpers in the client SDK:
-  - `resolveAgentPayService(...)`
-  - `selectAgentPayRoute(...)`
+  - `resolveStellarOxideGatewayService(...)`
+  - `selectStellarOxideGatewayRoute(...)`
 - explicit contract version constants for:
   - manifest
   - registry export
@@ -52,7 +52,7 @@ Use this guide to build the missing parts intentionally.
 
 ## What This Wedge Means
 
-In this wedge, AgentPay is not only:
+In this wedge, Stellar Oxide Gateway is not only:
 
 - a payment gateway
 - a route paywall
@@ -154,7 +154,7 @@ Required output:
 - version and deployment metadata
 - structured receipts and request observability later
 
-## What AgentPay Already Has
+## What Stellar Oxide Gateway Already Has
 
 Already present:
 
@@ -185,7 +185,7 @@ Add a stable well-known manifest endpoint.
 
 Recommended path:
 
-- `GET /.well-known/agentpay.json`
+- `GET /.well-known/stellar-oxide-gateway.json`
 
 Purpose:
 
@@ -272,7 +272,7 @@ This is the recommended order for building this wedge.
 Implement:
 
 - provider/service manifest schema
-- `/.well-known/agentpay.json`
+- `/.well-known/stellar-oxide-gateway.json`
 
 This is the first real infrastructure move.
 
@@ -425,11 +425,11 @@ Provider
 
 If you want to implement this wedge properly, the next feature should be:
 
-- a versioned provider manifest endpoint at `/.well-known/agentpay.json`
+- a versioned provider manifest endpoint at `/.well-known/stellar-oxide-gateway.json`
 
 Why:
 
-- it upgrades AgentPay from "SDK with discovery" to "publishable ecosystem
+- it upgrades Stellar Oxide Gateway from "SDK with discovery" to "publishable ecosystem
   service"
 - it gives external registries and agents a single source of truth
 - it creates a durable compatibility contract
@@ -441,8 +441,8 @@ This document is the practical implementation guide for the
 
 Use it together with:
 
-- [docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md](/home/kelly-musk/agentpay-server/docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md)
-- [docs/ROADMAP_ECOSYSTEM_TOOLING.md](/home/kelly-musk/agentpay-server/docs/ROADMAP_ECOSYSTEM_TOOLING.md)
+- [docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md](/home/kelly-musk/stellar-oxide-gateway-server/docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md)
+- [docs/ROADMAP_ECOSYSTEM_TOOLING.md](/home/kelly-musk/stellar-oxide-gateway-server/docs/ROADMAP_ECOSYSTEM_TOOLING.md)
 
 If there is a conflict between ad-hoc examples and the intended infra direction,
 these documents should be treated as the stronger reference.

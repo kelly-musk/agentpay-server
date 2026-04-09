@@ -7,9 +7,9 @@ import {
 } from "./postgres.js";
 
 const DEFAULT_INTENTS_FILE = "intents.json";
-const DEFAULT_INTENTS_SQLITE_FILE = "agentpay-intents.db";
+const DEFAULT_INTENTS_SQLITE_FILE = "stellar-oxide-gateway-intents.db";
 const DEFAULT_INTENTS_POSTGRES_SCHEMA = "public";
-const DEFAULT_INTENTS_POSTGRES_TABLE = "agentpay_intents";
+const DEFAULT_INTENTS_POSTGRES_TABLE = "stellar_oxide_gateway_intents";
 
 function sortIntents(intents) {
   return intents

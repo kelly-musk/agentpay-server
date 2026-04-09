@@ -1,14 +1,14 @@
 # Ecosystem Tooling Roadmap
 
 This roadmap translates
-[docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md](/home/kelly-musk/agentpay-server/docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md)
+[docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md](/home/kelly-musk/stellar-oxide-gateway-server/docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md)
 into concrete implementation phases.
 
 ## Phase 1: Paid Agent Service Foundation
 
 Goal:
 
-- make AgentPay clearly useful for real paid APIs
+- make Stellar Oxide Gateway clearly useful for real paid APIs
 
 Deliverables:
 
@@ -28,7 +28,7 @@ Goal:
 
 Deliverables:
 
-- `/.well-known/agentpay.json`
+- `/.well-known/stellar-oxide-gateway.json`
 - provider manifest schema
 - versioned service publishing shape
 

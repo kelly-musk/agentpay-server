@@ -1,6 +1,6 @@
 # Paid Agent APIs Implementation Guide
 
-This guide explains how to implement AgentPay as a real **paid agent services /
+This guide explains how to implement Stellar Oxide Gateway as a real **paid agent services /
 APIs** product.
 
 It is the practical reference for developers who want to turn an API into a
@@ -14,7 +14,7 @@ pay-per-request service for:
 This document is implementation-focused. It shows:
 
 - what to build
-- how to wire it into AgentPay
+- how to wire it into Stellar Oxide Gateway
 - how consumers pay
 - what metadata to expose
 - which example templates to start from
@@ -67,7 +67,7 @@ Examples:
 
 Use one of these modes.
 
-### Mode 1: Embed AgentPay in your own Express app
+### Mode 1: Embed Stellar Oxide Gateway in your own Express app
 
 Best for:
 
@@ -77,9 +77,9 @@ Best for:
 
 Use:
 
-- `registerAgentPayRoutes(...)`
+- `registerStellarOxideGatewayRoutes(...)`
 
-### Mode 2: Run AgentPay as a standalone public gateway
+### Mode 2: Run Stellar Oxide Gateway as a standalone public gateway
 
 Best for:
 
@@ -159,10 +159,10 @@ import express from "express";
 const app = express();
 ```
 
-### 2. Import AgentPay
+### 2. Import Stellar Oxide Gateway
 
 ```js
-import { NETWORK_IDS, registerAgentPayRoutes } from "agentpay-gateway";
+import { NETWORK_IDS, registerStellarOxideGatewayRoutes } from "stellar-oxide-gateway";
 ```
 
 ### 3. Define gateway config
@@ -238,17 +238,17 @@ const routes = [
 ### 5. Register the routes
 
 ```js
-registerAgentPayRoutes(app, {
+registerStellarOxideGatewayRoutes(app, {
   config,
   routes,
   storage: {
     intents: {
       type: "sqlite",
-      filename: "./agentpay-intents.db",
+      filename: "./stellar-oxide-gateway-intents.db",
     },
     usage: {
       type: "sqlite",
-      filename: "./agentpay-usage.db",
+      filename: "./stellar-oxide-gateway-usage.db",
     },
   },
 });
@@ -357,16 +357,16 @@ Recommended:
 
 Use the template closest to your product:
 
-- [examples/paid-search-provider.js](/home/kelly-musk/agentpay-server/examples/paid-search-provider.js)
+- [examples/paid-search-provider.js](/home/kelly-musk/stellar-oxide-gateway-server/examples/paid-search-provider.js)
   For search, retrieval, and grounded lookup APIs.
 
-- [examples/paid-market-data-provider.js](/home/kelly-musk/agentpay-server/examples/paid-market-data-provider.js)
+- [examples/paid-market-data-provider.js](/home/kelly-musk/stellar-oxide-gateway-server/examples/paid-market-data-provider.js)
   For market data, signals, and news APIs.
 
-- [examples/paid-scraper-provider.js](/home/kelly-musk/agentpay-server/examples/paid-scraper-provider.js)
+- [examples/paid-scraper-provider.js](/home/kelly-musk/stellar-oxide-gateway-server/examples/paid-scraper-provider.js)
   For scraping, extraction, and collection APIs.
 
-- [examples/paid-inference-provider.js](/home/kelly-musk/agentpay-server/examples/paid-inference-provider.js)
+- [examples/paid-inference-provider.js](/home/kelly-musk/stellar-oxide-gateway-server/examples/paid-inference-provider.js)
   For AI inference, summarization, and generation APIs.
 
 ## Design Rules for Good Paid Agent APIs
@@ -423,7 +423,7 @@ Paid APIs should return real payment confirmation data for:
 - debugging
 - downstream automation
 
-## Current AgentPay Features That Support This
+## Current Stellar Oxide Gateway Features That Support This
 
 Already implemented:
 
@@ -453,5 +453,5 @@ This document is the practical implementation reference for the
 
 For the larger ecosystem/infrastructure direction, use:
 
-- [docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md](/home/kelly-musk/agentpay-server/docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md)
-- [docs/ROADMAP_ECOSYSTEM_TOOLING.md](/home/kelly-musk/agentpay-server/docs/ROADMAP_ECOSYSTEM_TOOLING.md)
+- [docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md](/home/kelly-musk/stellar-oxide-gateway-server/docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md)
+- [docs/ROADMAP_ECOSYSTEM_TOOLING.md](/home/kelly-musk/stellar-oxide-gateway-server/docs/ROADMAP_ECOSYSTEM_TOOLING.md)

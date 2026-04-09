@@ -4,8 +4,8 @@ import { mkdtemp, rm } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
 import {
-  createAgentPayApp,
-  createAgentPayProvider,
+  createStellarOxideGatewayApp,
+  createStellarOxideGatewayProvider,
   validateProviderOptions,
 } from "../server/provider.js";
 import {
@@ -121,7 +121,7 @@ async function invokeRoute(app, path, method, reqOverrides = {}) {
 }
 
 test("supports custom endpoint catalogs for implementers", () => {
-  const app = createAgentPayApp({
+  const app = createStellarOxideGatewayApp({
     config,
     endpoints: {
       summarize: {
@@ -143,7 +143,7 @@ test("supports custom endpoint catalogs for implementers", () => {
 });
 
 test("supports declarative protected route definitions", () => {
-  const app = createAgentPayApp({
+  const app = createStellarOxideGatewayApp({
     config,
     routes: [
       {
@@ -164,7 +164,7 @@ test("supports declarative protected route definitions", () => {
 
 test("supports declarative upstream proxy routes for implementers", async () => {
   const calls = [];
-  const provider = createAgentPayProvider({
+  const provider = createStellarOxideGatewayProvider({
     config,
     routes: [
       {
@@ -226,7 +226,7 @@ test("supports declarative upstream proxy routes for implementers", async () => 
 });
 
 test("supports policy-based pricing, metadata, and conditional paywall bypass", async () => {
-  const app = createAgentPayApp({
+  const app = createStellarOxideGatewayApp({
     config,
     routes: [
       {
@@ -285,7 +285,7 @@ test("supports policy-based pricing, metadata, and conditional paywall bypass", 
 });
 
 test("applies policy hooks to intent creation and execution", async () => {
-  const app = createAgentPayApp({
+  const app = createStellarOxideGatewayApp({
     config,
     routes: [
       {
@@ -361,7 +361,7 @@ test("applies policy hooks to intent creation and execution", async () => {
 });
 
 test("supports intent creation for built-in GET endpoints", async () => {
-  const app = createAgentPayApp({ config });
+  const app = createStellarOxideGatewayApp({ config });
 
   const intentResponse = await invokeRoute(app, "/intents", "post", {
     body: {
@@ -379,7 +379,7 @@ test("supports intent creation for built-in GET endpoints", async () => {
 
 test("supports injected intent storage for implementers", () => {
   const intentStore = createIntentStore(createMemoryIntentStorage());
-  const app = createAgentPayApp({
+  const app = createStellarOxideGatewayApp({
     config,
     intentStore,
   });
@@ -400,11 +400,11 @@ test("supports injected intent storage for implementers", () => {
 });
 
 test("supports sqlite intent storage for durable provider state", async () => {
-  const tempRoot = await mkdtemp(join(tmpdir(), "agentpay-sqlite-"));
+  const tempRoot = await mkdtemp(join(tmpdir(), "stellar-oxide-gateway-sqlite-"));
   const sqliteFile = join(tempRoot, "intents.db");
 
   try {
-    const provider = createAgentPayProvider({
+    const provider = createStellarOxideGatewayProvider({
       config,
       storage: {
         intents: {
@@ -413,7 +413,7 @@ test("supports sqlite intent storage for durable provider state", async () => {
         },
       },
     });
-    const app = createAgentPayApp({
+    const app = createStellarOxideGatewayApp({
       config,
       storage: {
         intents: {
@@ -448,7 +448,7 @@ test("supports sqlite intent storage for durable provider state", async () => {
 
 test("supports injected usage storage for implementers", async () => {
   const usageStore = createUsageStore(createMemoryUsageStorage());
-  const app = createAgentPayApp({
+  const app = createStellarOxideGatewayApp({
     config,
     usageStore,
   });
@@ -605,7 +605,7 @@ test("exposes readiness and shutdown hooks for provider storage backends", async
       usageClosed = true;
     },
   });
-  const provider = createAgentPayProvider({
+  const provider = createStellarOxideGatewayProvider({
     config,
     intentStore,
     usageStore,

@@ -400,7 +400,7 @@ function registerPublicRoutes(app, provider) {
 
   app.get("/", (req, res) => {
     res.json({
-      service: "agentpay-gateway",
+      service: "stellar-oxide-gateway",
       protocol: "x402-stellar",
       network: config.network,
       asset: paymentContext.getCapabilities().asset.symbol,
@@ -411,7 +411,7 @@ function registerPublicRoutes(app, provider) {
   app.get("/health", (req, res) => {
     res.json({
       ok: true,
-      service: "agentpay-gateway",
+      service: "stellar-oxide-gateway",
       network: config.network,
       asset: config.asset.symbol,
     });
@@ -426,7 +426,7 @@ function registerPublicRoutes(app, provider) {
     res.json(paymentContext.getCapabilities());
   });
 
-  app.get("/.well-known/agentpay.json", (req, res) => {
+  app.get("/.well-known/stellar-oxide-gateway.json", (req, res) => {
     res.json(paymentContext.getServiceManifest());
   });
 
@@ -541,7 +541,7 @@ function registerPublicRoutes(app, provider) {
         ? [
           paymentContext.buildRequirementsForResource(resourceUrl, endpoint, policy.query, {
             priceUsd: amount,
-            description: `Execute AgentPay ${endpoint} intent`,
+            description: `Execute Stellar Oxide Gateway ${endpoint} intent`,
             extra: {
               intentId: intent.id,
               flow: "intent-execution",
@@ -638,7 +638,7 @@ function registerIntentExecutionRoutes(app, provider) {
         intent.query,
         {
           priceUsd: intent.amount,
-          description: `Execute AgentPay ${intent.endpoint} intent`,
+          description: `Execute Stellar Oxide Gateway ${intent.endpoint} intent`,
           extra: {
             intentId: intent.id,
             flow: "intent-execution",
@@ -767,7 +767,7 @@ function registerDirectEndpointRoutes(app, provider) {
     app[method](endpoint.path, async (req, res, next) => {
       try {
         const policy = await evaluateEndpointPolicy(endpoint, req, config);
-        req.agentpayPolicy = policy;
+        req.stellarOxideGatewayPolicy = policy;
 
         if (!policy.shouldRequirePayment) {
           req.pricing = {
@@ -806,7 +806,7 @@ function registerDirectEndpointRoutes(app, provider) {
       }
     }, async (req, res) => {
       try {
-        const query = req.agentpayPolicy?.query
+        const query = req.stellarOxideGatewayPolicy?.query
           || String((method === "get" ? req.query.q : (req.body?.query ?? req.query.q)) || "default query");
         const result = await handlers[endpoint.id](config, query, { req });
         let settlement = null;
@@ -832,7 +832,7 @@ function registerDirectEndpointRoutes(app, provider) {
             network: config.network,
             asset: config.asset.symbol,
             amount: req.pricing.amount,
-            metadata: req.agentpayPolicy?.paymentMetadata || {},
+            metadata: req.stellarOxideGatewayPolicy?.paymentMetadata || {},
             receipt: settlement?.receipt || null,
             settlement,
           };
@@ -842,7 +842,7 @@ function registerDirectEndpointRoutes(app, provider) {
             network: config.network,
             asset: config.asset.symbol,
             amount: "0.00",
-            metadata: req.agentpayPolicy?.paymentMetadata || {},
+            metadata: req.stellarOxideGatewayPolicy?.paymentMetadata || {},
           };
         }
 
@@ -870,7 +870,7 @@ function registerDirectEndpointRoutes(app, provider) {
   }
 }
 
-export function createAgentPayProvider(options = {}) {
+export function createStellarOxideGatewayProvider(options = {}) {
   const {
     config,
     handlers,
@@ -915,7 +915,7 @@ export function createAgentPayProvider(options = {}) {
 
       return {
         ok,
-        service: "agentpay-gateway",
+        service: "stellar-oxide-gateway",
         network: config.network,
         asset: config.asset.symbol,
         checks,
@@ -949,18 +949,18 @@ export function createAgentPayProvider(options = {}) {
   };
 }
 
-export function registerAgentPayRoutes(app, options = {}) {
-  const provider = createAgentPayProvider(options);
+export function registerStellarOxideGatewayRoutes(app, options = {}) {
+  const provider = createStellarOxideGatewayProvider(options);
   provider.register(app);
   return provider;
 }
 
-export function createAgentPayApp(options = {}) {
+export function createStellarOxideGatewayApp(options = {}) {
   const app = express();
   app.use(express.json());
   app.set("trust proxy", true);
-  const provider = registerAgentPayRoutes(app, options);
-  app.locals.agentpayProvider = provider;
+  const provider = registerStellarOxideGatewayRoutes(app, options);
+  app.locals.stellarOxideGatewayProvider = provider;
   return app;
 }
 

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import net from "node:net";
 import fetch from "node-fetch";
-import { createAgentPayApp, createMemoryIntentStorage, createMemoryUsageStorage } from "../server/index.js";
+import { createStellarOxideGatewayApp, createMemoryIntentStorage, createMemoryUsageStorage } from "../server/index.js";
 import { payFetch } from "../client/index.js";
 
 const MERCHANT_WALLET_ADDRESS = "GD3PXXADIXMWGINT2LK3Q45SLI3HRCRA2I7NDOTXXTGNXO7GDYKI4SK7";
@@ -40,12 +40,12 @@ function createTestConfig(port) {
 async function startTestServer() {
   const port = await getAvailablePort();
   const config = createTestConfig(port);
-  const app = createAgentPayApp({
+  const app = createStellarOxideGatewayApp({
     config,
     intentStorage: createMemoryIntentStorage(),
     usageStorage: createMemoryUsageStorage(),
   });
-  const provider = app.locals.agentpayProvider;
+  const provider = app.locals.stellarOxideGatewayProvider;
   const server = app.listen(port, "127.0.0.1");
 
   await once(server, "listening");
@@ -89,7 +89,7 @@ test("production-style Stellar testnet flow works end to end", { timeout: 120000
     const capabilitiesResponse = await fetch(`${baseUrl}/capabilities`);
     assert.equal(capabilitiesResponse.status, 200);
     const capabilities = await readJson(capabilitiesResponse);
-    assert.equal(capabilities.service, "agentpay-gateway");
+    assert.equal(capabilities.service, "stellar-oxide-gateway");
     assert.equal(capabilities.protocol, "x402-stellar");
     assert.equal(capabilities.network, "stellar-testnet");
     assert.equal(capabilities.asset.symbol, "XLM");

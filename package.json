@@ -1,5 +1,5 @@
 {
-  "name": "agentpay-gateway",
+  "name": "stellar-oxide-gateway",
   "version": "1.0.0",
   "description": "Agent-native x402 payment gateway on Stellar",
   "type": "module",
@@ -11,9 +11,7 @@
     "./pricing": "./server/pricing.js",
     "./client": "./client/index.js"
   },
-  "bin": {
-    "agentpay": "./client/client.js"
-  },
+  "bin": "./client/client.js",
   "packageManager": "yarn@4.12.0",
   "scripts": {
     "dev": "yarn node server.js",

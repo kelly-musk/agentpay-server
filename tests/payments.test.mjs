@@ -103,7 +103,7 @@ test("builds a versioned provider manifest for ecosystem tooling", () => {
   assert.equal(manifest.service.version, "2026.04.0");
   assert.equal(manifest.compatibility.networks[0], "stellar-testnet");
   assert.equal(manifest.compatibility.assets[0].symbol, "XLM");
-  assert.match(manifest.links.manifest, /\.well-known\/agentpay\.json$/);
+  assert.match(manifest.links.manifest, /\.well-known\/stellar-oxide-gateway\.json$/);
   assert.equal(manifest.routes.length, 3);
   assert.equal(manifest.routes[0].service.billingUnit, "request");
 });
@@ -160,7 +160,7 @@ test("builds a registry-friendly export shape for discovery systems", () => {
   assert.equal(listing.categories.includes("ai-inference"), true);
   assert.equal(listing.tags.includes("search"), true);
   assert.equal(listing.tags.includes("generation"), true);
-  assert.match(listing.manifestUrl, /\.well-known\/agentpay\.json$/);
+  assert.match(listing.manifestUrl, /\.well-known\/stellar-oxide-gateway\.json$/);
   assert.match(listing.capabilitiesUrl, /\/capabilities$/);
   assert.equal(listing.routes[0].billingUnit !== undefined, true);
 });

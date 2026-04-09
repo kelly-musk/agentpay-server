@@ -1,6 +1,6 @@
-# AgentPay Gateway
+# Stellar Oxide Gateway
 
-AgentPay Gateway is agent-native API monetization infrastructure on Stellar.
+Stellar Oxide Gateway is agent-native API monetization infrastructure on Stellar.
 
 It turns protected HTTP endpoints into pay-per-request services using x402-style
 payment challenges, Stellar-based settlement, and agent-friendly responses.
@@ -43,7 +43,7 @@ That makes it useful for many downstream services, including:
 
 ## Current Progress
 
-AgentPay is currently strongest in the **Paid agent services / APIs** wedge.
+Stellar Oxide Gateway is currently strongest in the **Paid agent services / APIs** wedge.
 
 Implemented today:
 
@@ -89,20 +89,20 @@ Reference docs:
 - **Product Requirements Document (PRD):**
   [Google Docs](https://docs.google.com/document/d/1BOtask_WttU2Oni6gIoFt5Mk9DrrWbRB/edit?usp=sharing&ouid=100722320761073170367&rtpof=true&sd=true) | [PRD.md](PRD.md)
 - paid agent APIs implementation:
-  [docs/PAID_AGENT_APIS_IMPLEMENTATION.md](/home/kelly-musk/agentpay-server/docs/PAID_AGENT_APIS_IMPLEMENTATION.md)
+  [docs/PAID_AGENT_APIS_IMPLEMENTATION.md](/home/kelly-musk/stellar-oxide-gateway-server/docs/PAID_AGENT_APIS_IMPLEMENTATION.md)
 - ecosystem tooling architecture target:
-  [docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md](/home/kelly-musk/agentpay-server/docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md)
+  [docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md](/home/kelly-musk/stellar-oxide-gateway-server/docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md)
 - ecosystem tooling implementation plan:
-  [docs/INFRASTRUCTURE_ECOSYSTEM_TOOLING_IMPLEMENTATION.md](/home/kelly-musk/agentpay-server/docs/INFRASTRUCTURE_ECOSYSTEM_TOOLING_IMPLEMENTATION.md)
+  [docs/INFRASTRUCTURE_ECOSYSTEM_TOOLING_IMPLEMENTATION.md](/home/kelly-musk/stellar-oxide-gateway-server/docs/INFRASTRUCTURE_ECOSYSTEM_TOOLING_IMPLEMENTATION.md)
 
 ## Integration Modes
 
-AgentPay can now be used in two ways:
+Stellar Oxide Gateway can now be used in two ways:
 
 1. as a standalone hosted gateway
 2. as an embeddable provider layer inside another Express service
 
-That means implementers can either deploy AgentPay directly or mount its routes
+That means implementers can either deploy Stellar Oxide Gateway directly or mount its routes
 inside their own app and protect their own paid endpoints with Stellar-backed
 payment verification.
 
@@ -130,7 +130,7 @@ The repo also includes a CLI payer that can:
 ```text
 Agent CLI / Agent Client
         ↓
-Public AgentPay Gateway
+Public Stellar Oxide Gateway
         ↓
 402 Challenge + Payment Verification
         ↓
@@ -142,14 +142,14 @@ Structured Response + Payment Metadata + Logging
 ## Product Architecture
 
 ```text
-                         AGENTPAY PRODUCT ARCHITECTURE
+                         STELLAR_OXIDE_GATEWAY PRODUCT ARCHITECTURE
 
 ┌──────────────────────────── IMPLEMENTER SIDE ─────────────────────────────┐
 │                                                                           │
 │  Developer / Company / Protocol                                           │
 │          │                                                                │
 │          ▼                                                                │
-│  Integrates AgentPay into:                                                │
+│  Integrates Stellar Oxide Gateway into:                                                │
 │  - paid API service                                                       │
 │  - protocol service                                                       │
 │  - SaaS backend                                                           │
@@ -165,9 +165,9 @@ Structured Response + Payment Metadata + Logging
 └───────────────────────────────────────────────────────────────────────────┘
                                    │
                                    ▼
-┌──────────────────────────── AGENTPAY LAYER ───────────────────────────────┐
+┌──────────────────────────── STELLAR_OXIDE_GATEWAY LAYER ───────────────────────────────┐
 │                                                                           │
-│  AgentPay Gateway / Middleware / SDK                                      │
+│  Stellar Oxide Gateway / Middleware / SDK                                      │
 │  - returns 402 payment challenge                                          │
 │  - exposes payment requirements                                           │
 │  - verifies x-payment                                                     │
@@ -205,16 +205,16 @@ User wallet pays   Platform backend pays              │
        │                ▼                     Retries with x-payment
        │        Service wallet signs                   │
        │                │                              ▼
-       ▼                ▼                      AgentPay verifies
+       ▼                ▼                      Stellar Oxide Gateway verifies
 Connect wallet     Retries with x-payment              │
 signs payment             │                            ▼
        │                  ▼                     Protected logic runs
-       ▼          AgentPay verifies                    │
+       ▼          Stellar Oxide Gateway verifies                    │
 Retries with             │                             ▼
 x-payment                ▼                      Response returned
        │          Protected logic runs
        ▼                  │
-AgentPay verifies         ▼
+Stellar Oxide Gateway verifies         ▼
        │           Response returned
        ▼
 Protected logic runs
@@ -225,8 +225,8 @@ Response returned
 
 This is the intended product shape:
 
-- implementers integrate AgentPay into their own service, protocol, or platform
-- AgentPay acts as the payment and authorization layer
+- implementers integrate Stellar Oxide Gateway into their own service, protocol, or platform
+- Stellar Oxide Gateway acts as the payment and authorization layer
 - consumers can be frontend apps, agents, or backend services
 - payment can come from the end user wallet or from a service wallet
 
@@ -245,9 +245,9 @@ In practice:
 
 The package now exposes a reusable provider surface for implementers:
 
-- `createAgentPayApp(...)`
-- `createAgentPayProvider(...)`
-- `registerAgentPayRoutes(app, ...)`
+- `createStellarOxideGatewayApp(...)`
+- `createStellarOxideGatewayProvider(...)`
+- `registerStellarOxideGatewayRoutes(app, ...)`
 - `validateProviderOptions(...)`
 - `validateGatewayConfig(...)`
 - `createIntentStore(...)`
@@ -264,13 +264,13 @@ The package now exposes a reusable provider surface for implementers:
 Stable import paths:
 
 ```js
-import { NETWORK_IDS, registerAgentPayRoutes } from "agentpay-gateway";
-import { createPaymentContext } from "agentpay-gateway/server";
-import { getPriceUsd } from "agentpay-gateway/pricing";
-import { payFetch } from "agentpay-gateway/client";
+import { NETWORK_IDS, registerStellarOxideGatewayRoutes } from "stellar-oxide-gateway";
+import { createPaymentContext } from "stellar-oxide-gateway/server";
+import { getPriceUsd } from "stellar-oxide-gateway/pricing";
+import { payFetch } from "stellar-oxide-gateway/client";
 ```
 
-AgentPay validates provider and gateway config before route registration. Invalid
+Stellar Oxide Gateway validates provider and gateway config before route registration. Invalid
 wallets, URLs, route methods, prices, or storage definitions fail fast during
 startup instead of surfacing later as runtime payment errors.
 
@@ -285,7 +285,7 @@ import {
   NETWORK_IDS,
   SUPPORTED_NETWORK_IDS,
   isSupportedNetworkId,
-} from "agentpay-gateway";
+} from "stellar-oxide-gateway";
 
 const network = NETWORK_IDS.STELLAR_TESTNET;
 const supported = isSupportedNetworkId(network);
@@ -299,11 +299,11 @@ The simplest integration path is now a declarative protected-route array:
 
 ```js
 import express from "express";
-import { NETWORK_IDS, registerAgentPayRoutes } from "agentpay-gateway";
+import { NETWORK_IDS, registerStellarOxideGatewayRoutes } from "stellar-oxide-gateway";
 
 const app = express();
 
-registerAgentPayRoutes(app, {
+registerStellarOxideGatewayRoutes(app, {
   config,
   routes: [
     {
@@ -324,7 +324,7 @@ Routes can also define policy hooks for dynamic pricing, conditional paywalling,
 and extra payment metadata:
 
 ```js
-registerAgentPayRoutes(app, {
+registerStellarOxideGatewayRoutes(app, {
   config,
   routes: [
     {
@@ -349,7 +349,7 @@ registerAgentPayRoutes(app, {
 Routes and endpoints can also describe themselves as real paid agent services:
 
 ```js
-registerAgentPayRoutes(app, {
+registerStellarOxideGatewayRoutes(app, {
   config,
   routes: [
     {
@@ -399,11 +399,11 @@ The same hooks also apply to the intent lifecycle:
 - the resulting policy output is stored on the intent
 - `POST /intents/:intentId/execute` follows the stored policy result
 
-If you already have an upstream API and want AgentPay to sit in front of it,
+If you already have an upstream API and want Stellar Oxide Gateway to sit in front of it,
 routes can proxy directly to that upstream without a custom local handler:
 
 ```js
-registerAgentPayRoutes(app, {
+registerStellarOxideGatewayRoutes(app, {
   config,
   routes: [
     {
@@ -422,7 +422,7 @@ registerAgentPayRoutes(app, {
 });
 ```
 
-For non-`GET` proxy routes, AgentPay forwards a JSON body that includes the
+For non-`GET` proxy routes, Stellar Oxide Gateway forwards a JSON body that includes the
 incoming request body plus `query`, `endpoint`, `path`, and `intentId` when the
 call came from an intent execution flow.
 
@@ -433,7 +433,7 @@ directly:
 import {
   validateGatewayConfig,
   validateProviderOptions,
-} from "agentpay-gateway/server";
+} from "stellar-oxide-gateway/server";
 
 const gatewayConfig = validateGatewayConfig(config);
 validateProviderOptions({
@@ -447,10 +447,10 @@ If you want more control, you can still provide `endpoints` and `handlers`
 separately.
 
 A copyable end-to-end provider example lives at
-[examples/express-provider.js](/home/kelly-musk/agentpay-server/examples/express-provider.js).
+[examples/express-provider.js](/home/kelly-musk/stellar-oxide-gateway-server/examples/express-provider.js).
 
 A more product-shaped paid-agent-API example lives at
-[examples/paid-search-provider.js](/home/kelly-musk/agentpay-server/examples/paid-search-provider.js).
+[examples/paid-search-provider.js](/home/kelly-musk/stellar-oxide-gateway-server/examples/paid-search-provider.js).
 It shows how to expose a paid search endpoint with:
 
 - service metadata for agents and developers
@@ -460,15 +460,15 @@ It shows how to expose a paid search endpoint with:
 
 Additional first-class paid-agent-API templates are available for:
 
-- [examples/paid-market-data-provider.js](/home/kelly-musk/agentpay-server/examples/paid-market-data-provider.js)
-- [examples/paid-scraper-provider.js](/home/kelly-musk/agentpay-server/examples/paid-scraper-provider.js)
-- [examples/paid-inference-provider.js](/home/kelly-musk/agentpay-server/examples/paid-inference-provider.js)
+- [examples/paid-market-data-provider.js](/home/kelly-musk/stellar-oxide-gateway-server/examples/paid-market-data-provider.js)
+- [examples/paid-scraper-provider.js](/home/kelly-musk/stellar-oxide-gateway-server/examples/paid-scraper-provider.js)
+- [examples/paid-inference-provider.js](/home/kelly-musk/stellar-oxide-gateway-server/examples/paid-inference-provider.js)
 
-For ecosystem tooling and provider publishing, AgentPay now also exposes a
+For ecosystem tooling and provider publishing, Stellar Oxide Gateway now also exposes a
 versioned manifest endpoint:
 
 ```text
-GET /.well-known/agentpay.json
+GET /.well-known/stellar-oxide-gateway.json
 ```
 
 That manifest is intended to become the provider-facing publishing contract for:
@@ -478,7 +478,7 @@ That manifest is intended to become the provider-facing publishing contract for:
 - discovery tooling
 - agent platforms
 
-For flatter registry ingestion and listing systems, AgentPay also exposes:
+For flatter registry ingestion and listing systems, Stellar Oxide Gateway also exposes:
 
 ```text
 GET /registry/export
@@ -504,12 +504,12 @@ Consumer SDKs can now resolve those publishing surfaces programmatically:
 
 ```js
 import {
-  resolveAgentPayService,
-  selectAgentPayRoute,
-} from "agentpay-gateway/client";
+  resolveStellarOxideGatewayService,
+  selectStellarOxideGatewayRoute,
+} from "stellar-oxide-gateway/client";
 
-const service = await resolveAgentPayService("https://api.example.com");
-const route = selectAgentPayRoute(service, {
+const service = await resolveStellarOxideGatewayService("https://api.example.com");
+const route = selectStellarOxideGatewayRoute(service, {
   category: "search-api",
   audience: "agents",
 });
@@ -517,7 +517,7 @@ const route = selectAgentPayRoute(service, {
 
 That is the first consumer-side service resolution layer built on top of:
 
-- `/.well-known/agentpay.json`
+- `/.well-known/stellar-oxide-gateway.json`
 - `/registry/export`
 - `/capabilities`
 - `/discovery/resources`
@@ -535,11 +535,11 @@ Example:
 
 ```js
 import express from "express";
-import { registerAgentPayRoutes } from "agentpay-gateway";
+import { registerStellarOxideGatewayRoutes } from "stellar-oxide-gateway";
 
 const app = express();
 
-registerAgentPayRoutes(app, {
+registerStellarOxideGatewayRoutes(app, {
   config: {
     port: 3000,
     gatewayUrl: "http://localhost:3000",
@@ -579,12 +579,12 @@ Implementers can also inject their own persistence:
 import {
   createIntentStore,
   createMemoryIntentStorage,
-  registerAgentPayRoutes,
-} from "agentpay-gateway";
+  registerStellarOxideGatewayRoutes,
+} from "stellar-oxide-gateway";
 
 const intentStore = createIntentStore(createMemoryIntentStorage());
 
-registerAgentPayRoutes(app, {
+registerStellarOxideGatewayRoutes(app, {
   config,
   intentStore,
   endpoints,
@@ -595,16 +595,16 @@ registerAgentPayRoutes(app, {
 Or choose storage by type through provider config:
 
 ```js
-registerAgentPayRoutes(app, {
+registerStellarOxideGatewayRoutes(app, {
   config,
   storage: {
     intents: {
       type: "sqlite",
-      filename: "./agentpay-intents.db",
+      filename: "./stellar-oxide-gateway-intents.db",
     },
     usage: {
       type: "sqlite",
-      filename: "./agentpay-usage.db",
+      filename: "./stellar-oxide-gateway-usage.db",
     },
   },
   endpoints,
@@ -615,20 +615,20 @@ registerAgentPayRoutes(app, {
 For production persistence, select Postgres-backed storage:
 
 ```js
-registerAgentPayRoutes(app, {
+registerStellarOxideGatewayRoutes(app, {
   config,
   storage: {
     intents: {
       type: "postgres",
       connectionString: process.env.DATABASE_URL,
       schemaName: "public",
-      tableName: "agentpay_intents",
+      tableName: "stellar-oxide-gateway_intents",
     },
     usage: {
       type: "postgres",
       connectionString: process.env.DATABASE_URL,
       schemaName: "public",
-      tableName: "agentpay_usage",
+      tableName: "stellar-oxide-gateway_usage",
     },
   },
   endpoints,
@@ -678,7 +678,7 @@ Longer queries receive a small surcharge.
 ## Project Structure
 
 ```text
-agentpay-gateway/
+stellar-oxide-gateway/
 ├── server/
 │   ├── server.js
 │   ├── pricing.js
@@ -699,7 +699,7 @@ agentpay-gateway/
 ```
 
 For a contributor-oriented repo walkthrough, see
-[docs/README.md](/home/kelly-musk/agentpay-server/docs/README.md).
+[docs/README.md](/home/kelly-musk/stellar-oxide-gateway-server/docs/README.md).
 
 ## Environment Variables
 
@@ -813,7 +813,7 @@ yarn smoke
 ```
 
 `yarn test:production` runs the live Stellar testnet verification suite in
-[production-tests/stellar-testnet.test.mjs](/home/kelly-musk/agentpay-server/production-tests/stellar-testnet.test.mjs).
+[production-tests/stellar-testnet.test.mjs](/home/kelly-musk/stellar-oxide-gateway-server/production-tests/stellar-testnet.test.mjs).
 It is intentionally separate from `yarn test` because it performs real network
 calls and real Stellar testnet payments. The suite is self-contained and does
 not require local env secrets because it uses:
@@ -826,15 +826,15 @@ not require local env secrets because it uses:
 
 Implementers can import:
 
-- `agentpay-gateway`
-- `agentpay-gateway/server`
-- `agentpay-gateway/payments`
-- `agentpay-gateway/pricing`
-- `agentpay-gateway/client`
+- `stellar-oxide-gateway`
+- `stellar-oxide-gateway/server`
+- `stellar-oxide-gateway/payments`
+- `stellar-oxide-gateway/pricing`
+- `stellar-oxide-gateway/client`
 
 The provider surface is aimed at implementers who want to:
 
-- mount AgentPay routes inside their own Express service
+- mount Stellar Oxide Gateway routes inside their own Express service
 - bring their own endpoint catalog and handlers
 - inject durable intent and usage storage
 - inject their own intent storage and persistence strategy
@@ -858,7 +858,7 @@ configured storage backend is not healthy.
 
 Machine-readable endpoint and payment metadata for agent integrations.
 
-### `GET /.well-known/agentpay.json`
+### `GET /.well-known/stellar-oxide-gateway.json`
 
 Versioned provider manifest for ecosystem tooling, discovery systems, and
 registry-style integrations.
@@ -1150,7 +1150,7 @@ Expected:
 
 This flow is the right production-style checklist for the repo today, but it is
 still not a substitute for the broader work tracked in
-[docs/PRODUCTION_READINESS.md](/home/kelly-musk/agentpay-server/docs/PRODUCTION_READINESS.md).
+[docs/PRODUCTION_READINESS.md](/home/kelly-musk/stellar-oxide-gateway-server/docs/PRODUCTION_READINESS.md).
 
 ## Verified Progress
 
@@ -1187,9 +1187,9 @@ One real production-style defect was found and fixed during that live pass:
 - `POST /intents` for built-in GET endpoints was not correctly bridging the
   intent query into the policy evaluation path
 - that bug is now fixed in
-  [server/provider.js](/home/kelly-musk/agentpay-server/server/provider.js)
+  [server/provider.js](/home/kelly-musk/stellar-oxide-gateway-server/server/provider.js)
 - regression coverage was added in
-  [tests/provider.test.mjs](/home/kelly-musk/agentpay-server/tests/provider.test.mjs)
+  [tests/provider.test.mjs](/home/kelly-musk/stellar-oxide-gateway-server/tests/provider.test.mjs)
 
 ## Request Lifecycle
 
@@ -1215,7 +1215,7 @@ One real production-style defect was found and fixed during that live pass:
 
 Many x402 demos monetize a single application workflow, like trading.
 
-AgentPay is different: it exposes a reusable payment layer that can be placed
+Stellar Oxide Gateway is different: it exposes a reusable payment layer that can be placed
 in front of arbitrary services. The goal is not just to sell one app feature,
 but to provide a public-facing payment gateway for agent-native APIs on Stellar.
 

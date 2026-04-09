@@ -1,7 +1,7 @@
 export {
-  createAgentPayApp,
-  createAgentPayProvider,
-  registerAgentPayRoutes,
+  createStellarOxideGatewayApp,
+  createStellarOxideGatewayProvider,
+  registerStellarOxideGatewayRoutes,
   validateProviderOptions,
   createFileIntentStorage,
   createMemoryIntentStorage,
@@ -27,10 +27,10 @@ export {
 
 export {
   payFetch,
-  fetchAgentPayManifest,
-  fetchAgentPayCapabilities,
-  fetchAgentPayRegistryExport,
-  fetchAgentPayDiscovery,
-  resolveAgentPayService,
-  selectAgentPayRoute,
+  fetchStellarOxideGatewayManifest,
+  fetchStellarOxideGatewayCapabilities,
+  fetchStellarOxideGatewayRegistryExport,
+  fetchStellarOxideGatewayDiscovery,
+  resolveStellarOxideGatewayService,
+  selectStellarOxideGatewayRoute,
 } from "./client/index.js";

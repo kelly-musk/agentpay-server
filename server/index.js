@@ -1,7 +1,7 @@
 export {
-  createAgentPayApp,
-  createAgentPayProvider,
-  registerAgentPayRoutes,
+  createStellarOxideGatewayApp,
+  createStellarOxideGatewayProvider,
+  registerStellarOxideGatewayRoutes,
   validateProviderOptions,
   createFileIntentStorage,
   createMemoryIntentStorage,

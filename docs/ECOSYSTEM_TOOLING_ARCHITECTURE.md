@@ -1,15 +1,15 @@
-# AgentPay Ecosystem Tooling Architecture
+# Stellar Oxide Gateway Ecosystem Tooling Architecture
 
 > Status: target-state architecture and planning reference.
-> This document describes where AgentPay should go for the ecosystem-tooling
+> This document describes where Stellar Oxide Gateway should go for the ecosystem-tooling
 > wedge. It does not mean the full ecosystem layer is already implemented.
 
-This document is the long-term reference and source of truth for AgentPay as
+This document is the long-term reference and source of truth for Stellar Oxide Gateway as
 infrastructure and ecosystem tooling, beyond the gateway and SDK that exist
 today.
 
 It defines the target architecture, product arcs, system boundaries, and the
-major building blocks required for AgentPay to evolve from:
+major building blocks required for Stellar Oxide Gateway to evolve from:
 
 - a gateway and SDK for paid agent APIs
 
@@ -29,7 +29,7 @@ into:
 
 ## Product Thesis
 
-AgentPay should not stop at "protect routes with a 402 payment flow."
+Stellar Oxide Gateway should not stop at "protect routes with a 402 payment flow."
 
 The larger infrastructure opportunity is to support an ecosystem where:
 
@@ -39,7 +39,7 @@ The larger infrastructure opportunity is to support an ecosystem where:
 - operators run them with observable, durable, and verifiable infrastructure
 - ecosystem tooling can index, compare, validate, and eventually trust them
 
-That means AgentPay becomes:
+That means Stellar Oxide Gateway becomes:
 
 - provider infrastructure
 - payment infrastructure
@@ -52,7 +52,7 @@ That means AgentPay becomes:
 ```text
 Provider builds a service
         ↓
-Provider integrates AgentPay
+Provider integrates Stellar Oxide Gateway
         ↓
 Provider publishes service metadata
         ↓
@@ -73,7 +73,7 @@ Registry / bazaar / facilitator / platform can index or observe compatible servi
 
 This is the first product wedge and the current foundation.
 
-AgentPay already supports:
+Stellar Oxide Gateway already supports:
 
 - paywalled endpoints
 - payment verification
@@ -182,7 +182,7 @@ Required capabilities:
 
 Desired output:
 
-- providers can run AgentPay-backed services reliably in real deployments
+- providers can run Stellar Oxide Gateway-backed services reliably in real deployments
 
 ### Pillar 5: Trust and Ecosystem Reputation
 
@@ -208,7 +208,7 @@ Provider defines service
         ↓
 Provider configures routes, pricing, schemas, and metadata
         ↓
-AgentPay publishes a manifest + capabilities + discovery surface
+Stellar Oxide Gateway publishes a manifest + capabilities + discovery surface
         ↓
 Service becomes indexable by ecosystem tooling
 ```
@@ -236,7 +236,7 @@ Signs and submits payment
         ↓
 Retries request with payment proof
         ↓
-AgentPay verifies and settles
+Stellar Oxide Gateway verifies and settles
         ↓
 Service response + structured receipt returned
 ```
@@ -246,7 +246,7 @@ Service response + structured receipt returned
 ```text
 Provider runs service
         ↓
-AgentPay records usage, revenue, and intent lifecycle
+Stellar Oxide Gateway records usage, revenue, and intent lifecycle
         ↓
 Provider observes readiness, logs, metrics, and receipts
         ↓
@@ -262,7 +262,7 @@ Registry / bazaar indexes services
         ↓
 Agents and platforms search/select services
         ↓
-Consumers transact through AgentPay-compatible flows
+Consumers transact through Stellar Oxide Gateway-compatible flows
         ↓
 Registry can later incorporate trust and reputation signals
 ```
@@ -279,7 +279,7 @@ Purpose:
 
 Suggested endpoint:
 
-- `GET /.well-known/agentpay.json`
+- `GET /.well-known/stellar-oxide-gateway.json`
 
 Suggested top-level fields:
 
@@ -458,7 +458,7 @@ Design and reserve fields for:
 
 The correct product framing becomes:
 
-AgentPay is infrastructure for publishing, discovering, and consuming paid
+Stellar Oxide Gateway is infrastructure for publishing, discovering, and consuming paid
 agent services on Stellar with x402-style payment flows.
 
 That breaks down into:

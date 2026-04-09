@@ -138,7 +138,7 @@ export async function runPayerCheck({
 }) {
   if (!secretKey) {
     throw new Error(
-      "Missing payer credentials. Run `agentpay setup`, or export STELLAR_SECRET_KEY first.",
+      "Missing payer credentials. Run `stellar-oxide-gateway setup`, or export STELLAR_SECRET_KEY first.",
     );
   }
 

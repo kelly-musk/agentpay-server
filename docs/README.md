@@ -1,20 +1,20 @@
 # Getting Around The Repo
 
 This guide is the quickest way to understand where things live, what runs what,
-and where to make changes when you want to extend AgentPay Gateway.
+and where to make changes when you want to extend Stellar Oxide Gateway.
 
 ## Mental Model
 
 There are two main execution paths:
 
-1. The gateway in [server/server.js](/home/kelly-musk/agentpay-server/server/server.js)
-2. The CLI payer in [client/client.js](/home/kelly-musk/agentpay-server/client/client.js)
+1. The gateway in [server/server.js](/home/kelly-musk/stellar-oxide-gateway-server/server/server.js)
+2. The CLI payer in [client/client.js](/home/kelly-musk/stellar-oxide-gateway-server/client/client.js)
 
 There is now also an embeddable provider layer in
-[server/provider.js](/home/kelly-musk/agentpay-server/server/provider.js)
-that lets other developers mount AgentPay routes into their own Express apps.
+[server/provider.js](/home/kelly-musk/stellar-oxide-gateway-server/server/provider.js)
+that lets other developers mount Stellar Oxide Gateway routes into their own Express apps.
 Intent persistence is now pluggable through
-[server/intents.js](/home/kelly-musk/agentpay-server/server/intents.js).
+[server/intents.js](/home/kelly-musk/stellar-oxide-gateway-server/server/intents.js).
 
 The gateway exposes paywalled routes, returns `402` payment challenges, verifies
 incoming Stellar payments, executes business logic, and logs usage.
@@ -26,43 +26,43 @@ retries with `x-payment`, and prints the final API response.
 
 ### Root
 
-- [index.js](/home/kelly-musk/agentpay-server/index.js): root SDK entrypoint for implementers.
-- [server.js](/home/kelly-musk/agentpay-server/server.js): thin root entrypoint that boots the server folder.
-- [client.js](/home/kelly-musk/agentpay-server/client.js): thin root entrypoint that boots the client folder.
-- [package.json](/home/kelly-musk/agentpay-server/package.json): scripts, metadata, and dependencies.
-- [README.md](/home/kelly-musk/agentpay-server/README.md): product-facing project overview.
-- [docs/PAID_AGENT_APIS_IMPLEMENTATION.md](/home/kelly-musk/agentpay-server/docs/PAID_AGENT_APIS_IMPLEMENTATION.md): practical guide for the currently implementable paid agent services / APIs wedge.
-- [docs/INFRASTRUCTURE_ECOSYSTEM_TOOLING_IMPLEMENTATION.md](/home/kelly-musk/agentpay-server/docs/INFRASTRUCTURE_ECOSYSTEM_TOOLING_IMPLEMENTATION.md): future-facing implementation guide for the infrastructure / ecosystem tooling wedge.
-- [docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md](/home/kelly-musk/agentpay-server/docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md): target-state source of truth for the infrastructure/ecosystem-tooling direction.
-- [docs/ROADMAP_ECOSYSTEM_TOOLING.md](/home/kelly-musk/agentpay-server/docs/ROADMAP_ECOSYSTEM_TOOLING.md): roadmap derived from the architecture reference.
-- [examples/express-provider.js](/home/kelly-musk/agentpay-server/examples/express-provider.js): copyable Express integration example.
-- [examples/paid-search-provider.js](/home/kelly-musk/agentpay-server/examples/paid-search-provider.js): paid-agent-API template for a search service.
-- [examples/paid-market-data-provider.js](/home/kelly-musk/agentpay-server/examples/paid-market-data-provider.js): paid market/news data template.
-- [examples/paid-scraper-provider.js](/home/kelly-musk/agentpay-server/examples/paid-scraper-provider.js): paid scraping/data extraction template.
-- [examples/paid-inference-provider.js](/home/kelly-musk/agentpay-server/examples/paid-inference-provider.js): paid AI inference template.
+- [index.js](/home/kelly-musk/stellar-oxide-gateway-server/index.js): root SDK entrypoint for implementers.
+- [server.js](/home/kelly-musk/stellar-oxide-gateway-server/server.js): thin root entrypoint that boots the server folder.
+- [client.js](/home/kelly-musk/stellar-oxide-gateway-server/client.js): thin root entrypoint that boots the client folder.
+- [package.json](/home/kelly-musk/stellar-oxide-gateway-server/package.json): scripts, metadata, and dependencies.
+- [README.md](/home/kelly-musk/stellar-oxide-gateway-server/README.md): product-facing project overview.
+- [docs/PAID_AGENT_APIS_IMPLEMENTATION.md](/home/kelly-musk/stellar-oxide-gateway-server/docs/PAID_AGENT_APIS_IMPLEMENTATION.md): practical guide for the currently implementable paid agent services / APIs wedge.
+- [docs/INFRASTRUCTURE_ECOSYSTEM_TOOLING_IMPLEMENTATION.md](/home/kelly-musk/stellar-oxide-gateway-server/docs/INFRASTRUCTURE_ECOSYSTEM_TOOLING_IMPLEMENTATION.md): future-facing implementation guide for the infrastructure / ecosystem tooling wedge.
+- [docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md](/home/kelly-musk/stellar-oxide-gateway-server/docs/ECOSYSTEM_TOOLING_ARCHITECTURE.md): target-state source of truth for the infrastructure/ecosystem-tooling direction.
+- [docs/ROADMAP_ECOSYSTEM_TOOLING.md](/home/kelly-musk/stellar-oxide-gateway-server/docs/ROADMAP_ECOSYSTEM_TOOLING.md): roadmap derived from the architecture reference.
+- [examples/express-provider.js](/home/kelly-musk/stellar-oxide-gateway-server/examples/express-provider.js): copyable Express integration example.
+- [examples/paid-search-provider.js](/home/kelly-musk/stellar-oxide-gateway-server/examples/paid-search-provider.js): paid-agent-API template for a search service.
+- [examples/paid-market-data-provider.js](/home/kelly-musk/stellar-oxide-gateway-server/examples/paid-market-data-provider.js): paid market/news data template.
+- [examples/paid-scraper-provider.js](/home/kelly-musk/stellar-oxide-gateway-server/examples/paid-scraper-provider.js): paid scraping/data extraction template.
+- [examples/paid-inference-provider.js](/home/kelly-musk/stellar-oxide-gateway-server/examples/paid-inference-provider.js): paid AI inference template.
 
 ### Server
 
-- [server/index.js](/home/kelly-musk/agentpay-server/server/index.js): server-focused SDK entrypoint.
-- [server/server.js](/home/kelly-musk/agentpay-server/server/server.js): Express app setup, routes, and payment enforcement.
-- [server/provider.js](/home/kelly-musk/agentpay-server/server/provider.js): reusable provider integration layer for implementers.
-- [server/payments.js](/home/kelly-musk/agentpay-server/server/payments.js): x402 requirement generation, verification, settlement, and capabilities.
-- [server/intents.js](/home/kelly-musk/agentpay-server/server/intents.js): intent store abstractions and file, SQLite, and Postgres storage adapters.
-- [server/pricing.js](/home/kelly-musk/agentpay-server/server/pricing.js): endpoint catalog and dynamic pricing rules.
-- [server/logger.js](/home/kelly-musk/agentpay-server/server/logger.js): request logging and `/stats` aggregation.
-- [server/handlers/shared.js](/home/kelly-musk/agentpay-server/server/handlers/shared.js): shared business logic and Rust forwarding helper.
-- [server/handlers/ai.js](/home/kelly-musk/agentpay-server/server/handlers/ai.js): AI endpoint handler.
-- [server/handlers/data.js](/home/kelly-musk/agentpay-server/server/handlers/data.js): data endpoint handler.
-- [server/handlers/compute.js](/home/kelly-musk/agentpay-server/server/handlers/compute.js): compute endpoint handler.
+- [server/index.js](/home/kelly-musk/stellar-oxide-gateway-server/server/index.js): server-focused SDK entrypoint.
+- [server/server.js](/home/kelly-musk/stellar-oxide-gateway-server/server/server.js): Express app setup, routes, and payment enforcement.
+- [server/provider.js](/home/kelly-musk/stellar-oxide-gateway-server/server/provider.js): reusable provider integration layer for implementers.
+- [server/payments.js](/home/kelly-musk/stellar-oxide-gateway-server/server/payments.js): x402 requirement generation, verification, settlement, and capabilities.
+- [server/intents.js](/home/kelly-musk/stellar-oxide-gateway-server/server/intents.js): intent store abstractions and file, SQLite, and Postgres storage adapters.
+- [server/pricing.js](/home/kelly-musk/stellar-oxide-gateway-server/server/pricing.js): endpoint catalog and dynamic pricing rules.
+- [server/logger.js](/home/kelly-musk/stellar-oxide-gateway-server/server/logger.js): request logging and `/stats` aggregation.
+- [server/handlers/shared.js](/home/kelly-musk/stellar-oxide-gateway-server/server/handlers/shared.js): shared business logic and Rust forwarding helper.
+- [server/handlers/ai.js](/home/kelly-musk/stellar-oxide-gateway-server/server/handlers/ai.js): AI endpoint handler.
+- [server/handlers/data.js](/home/kelly-musk/stellar-oxide-gateway-server/server/handlers/data.js): data endpoint handler.
+- [server/handlers/compute.js](/home/kelly-musk/stellar-oxide-gateway-server/server/handlers/compute.js): compute endpoint handler.
 
 ### Client
 
-- [client/index.js](/home/kelly-musk/agentpay-server/client/index.js): client-focused SDK entrypoint.
-- [client/client.js](/home/kelly-musk/agentpay-server/client/client.js): CLI argument parsing and request orchestration.
-- [client/lib/config.js](/home/kelly-musk/agentpay-server/client/lib/config.js): persistent non-secret CLI config storage.
-- [client/lib/secure-store.js](/home/kelly-musk/agentpay-server/client/lib/secure-store.js): OS keychain storage for wallet secrets.
-- [client/lib/payer-check.js](/home/kelly-musk/agentpay-server/client/lib/payer-check.js): reusable payer readiness checks.
-- [client/payFetch.js](/home/kelly-musk/agentpay-server/client/payFetch.js): local Stellar payer implementation for `402 -> sign -> retry`.
+- [client/index.js](/home/kelly-musk/stellar-oxide-gateway-server/client/index.js): client-focused SDK entrypoint.
+- [client/client.js](/home/kelly-musk/stellar-oxide-gateway-server/client/client.js): CLI argument parsing and request orchestration.
+- [client/lib/config.js](/home/kelly-musk/stellar-oxide-gateway-server/client/lib/config.js): persistent non-secret CLI config storage.
+- [client/lib/secure-store.js](/home/kelly-musk/stellar-oxide-gateway-server/client/lib/secure-store.js): OS keychain storage for wallet secrets.
+- [client/lib/payer-check.js](/home/kelly-musk/stellar-oxide-gateway-server/client/lib/payer-check.js): reusable payer readiness checks.
+- [client/payFetch.js](/home/kelly-musk/stellar-oxide-gateway-server/client/payFetch.js): local Stellar payer implementation for `402 -> sign -> retry`.
 
 The CLI command surface currently includes:
 
@@ -82,11 +82,11 @@ The CLI command surface currently includes:
 
 ### Tooling
 
-- [scripts/lint.mjs](/home/kelly-musk/agentpay-server/scripts/lint.mjs): syntax and lightweight style checks.
-- [scripts/build.mjs](/home/kelly-musk/agentpay-server/scripts/build.mjs): quality-gated build step that writes `dist/manifest.json`.
-- [scripts/smoke.mjs](/home/kelly-musk/agentpay-server/scripts/smoke.mjs): tiny repo sanity check.
-- [tests/pricing.test.mjs](/home/kelly-musk/agentpay-server/tests/pricing.test.mjs): pricing unit tests.
-- [tests/payments.test.mjs](/home/kelly-musk/agentpay-server/tests/payments.test.mjs): payment requirement unit tests.
+- [scripts/lint.mjs](/home/kelly-musk/stellar-oxide-gateway-server/scripts/lint.mjs): syntax and lightweight style checks.
+- [scripts/build.mjs](/home/kelly-musk/stellar-oxide-gateway-server/scripts/build.mjs): quality-gated build step that writes `dist/manifest.json`.
+- [scripts/smoke.mjs](/home/kelly-musk/stellar-oxide-gateway-server/scripts/smoke.mjs): tiny repo sanity check.
+- [tests/pricing.test.mjs](/home/kelly-musk/stellar-oxide-gateway-server/tests/pricing.test.mjs): pricing unit tests.
+- [tests/payments.test.mjs](/home/kelly-musk/stellar-oxide-gateway-server/tests/payments.test.mjs): payment requirement unit tests.
 
 ## Common Tasks
 
@@ -96,19 +96,19 @@ Run the gateway:
 X402_ASSET=USDC yarn start
 ```
 
-Mount AgentPay into another Express app:
+Mount Stellar Oxide Gateway into another Express app:
 
 ```js
 import express from "express";
-import { registerAgentPayRoutes } from "agentpay-gateway";
+import { registerStellarOxideGatewayRoutes } from "stellar-oxide-gateway";
 ```
 
 Import server/client helpers from stable SDK paths:
 
 ```js
-import { NETWORK_IDS } from "agentpay-gateway";
-import { createPaymentContext } from "agentpay-gateway/server";
-import { payFetch } from "agentpay-gateway/client";
+import { NETWORK_IDS } from "stellar-oxide-gateway";
+import { createPaymentContext } from "stellar-oxide-gateway/server";
+import { payFetch } from "stellar-oxide-gateway/client";
 ```
 
 Run provider or gateway config through the fail-fast validators:
@@ -120,7 +120,7 @@ import {
   isSupportedNetworkId,
   validateGatewayConfig,
   validateProviderOptions,
-} from "agentpay-gateway/server";
+} from "stellar-oxide-gateway/server";
 ```
 
 `NETWORK_IDS` includes the broader future identifier space. Use
@@ -130,7 +130,7 @@ what this package actually supports at runtime today.
 Use the simpler declarative route API:
 
 ```js
-registerAgentPayRoutes(app, {
+registerStellarOxideGatewayRoutes(app, {
   config,
   routes: [
     {
@@ -147,7 +147,7 @@ registerAgentPayRoutes(app, {
 Add route-level policy hooks when implementers need more than a static price:
 
 ```js
-registerAgentPayRoutes(app, {
+registerStellarOxideGatewayRoutes(app, {
   config,
   routes: [
     {
@@ -176,7 +176,7 @@ server integration, do not rely on a silent testnet default. Set
 Or protect an existing upstream API directly:
 
 ```js
-registerAgentPayRoutes(app, {
+registerStellarOxideGatewayRoutes(app, {
   config,
   routes: [
     {
@@ -197,22 +197,22 @@ registerAgentPayRoutes(app, {
 Inject a custom intent store:
 
 ```js
-import { createIntentStore, createMemoryIntentStorage } from "agentpay-gateway";
+import { createIntentStore, createMemoryIntentStorage } from "stellar-oxide-gateway";
 ```
 
 Or select SQLite-backed intent storage:
 
 ```js
-registerAgentPayRoutes(app, {
+registerStellarOxideGatewayRoutes(app, {
   config,
   storage: {
     intents: {
       type: "sqlite",
-      filename: "./agentpay-intents.db",
+      filename: "./stellar-oxide-gateway-intents.db",
     },
     usage: {
       type: "sqlite",
-      filename: "./agentpay-usage.db",
+      filename: "./stellar-oxide-gateway-usage.db",
     },
   },
   endpoints,
@@ -223,20 +223,20 @@ registerAgentPayRoutes(app, {
 Or select Postgres-backed storage for production persistence:
 
 ```js
-registerAgentPayRoutes(app, {
+registerStellarOxideGatewayRoutes(app, {
   config,
   storage: {
     intents: {
       type: "postgres",
       connectionString: process.env.DATABASE_URL,
       schemaName: "public",
-      tableName: "agentpay_intents",
+      tableName: "stellar-oxide-gateway_intents",
     },
     usage: {
       type: "postgres",
       connectionString: process.env.DATABASE_URL,
       schemaName: "public",
-      tableName: "agentpay_usage",
+      tableName: "stellar-oxide-gateway_usage",
     },
   },
   endpoints,
@@ -326,28 +326,28 @@ To add a new paid endpoint:
 
 1. add a route object to `routes`, or add metadata to your endpoint catalog
 2. provide its handler either inline in `routes` or via the provider `handlers` map
-3. register routes through [server/provider.js](/home/kelly-musk/agentpay-server/server/provider.js)
+3. register routes through [server/provider.js](/home/kelly-musk/stellar-oxide-gateway-server/server/provider.js)
 
 To change how payment verification works:
 
-- start in [server/payments.js](/home/kelly-musk/agentpay-server/server/payments.js)
+- start in [server/payments.js](/home/kelly-musk/stellar-oxide-gateway-server/server/payments.js)
 
-To change how implementers embed AgentPay:
+To change how implementers embed Stellar Oxide Gateway:
 
-- start in [server/provider.js](/home/kelly-musk/agentpay-server/server/provider.js)
+- start in [server/provider.js](/home/kelly-musk/stellar-oxide-gateway-server/server/provider.js)
 
 To change persistence or storage behavior:
 
-- start in [server/intents.js](/home/kelly-musk/agentpay-server/server/intents.js)
-- usage/analytics storage also lives in [server/logger.js](/home/kelly-musk/agentpay-server/server/logger.js)
+- start in [server/intents.js](/home/kelly-musk/stellar-oxide-gateway-server/server/intents.js)
+- usage/analytics storage also lives in [server/logger.js](/home/kelly-musk/stellar-oxide-gateway-server/server/logger.js)
 
 To change the CLI signing flow:
 
-- start in [client/payFetch.js](/home/kelly-musk/agentpay-server/client/payFetch.js)
+- start in [client/payFetch.js](/home/kelly-musk/stellar-oxide-gateway-server/client/payFetch.js)
 
 To swap local fallback logic for Rust-backed execution:
 
-- start in [server/handlers/shared.js](/home/kelly-musk/agentpay-server/server/handlers/shared.js)
+- start in [server/handlers/shared.js](/home/kelly-musk/stellar-oxide-gateway-server/server/handlers/shared.js)
 
 ## Environment Notes
 
@@ -377,7 +377,7 @@ For intent-based execution:
 
 1. `POST /intents` creates a payable intent.
 2. `POST /intents/:intentId/execute` is payment-gated.
-3. [server/intents.js](/home/kelly-musk/agentpay-server/server/intents.js) records `pending`, `paid`, `executed`, or `failed`.
+3. [server/intents.js](/home/kelly-musk/stellar-oxide-gateway-server/server/intents.js) records `pending`, `paid`, `executed`, or `failed`.
 
 By default the standalone gateway uses file-backed intent storage, but
 implementers can inject their own in-memory, SQLite, or Postgres-backed storage

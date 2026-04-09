@@ -32,7 +32,7 @@ test("registers the public gateway routes", () => {
     "/health",
     "/ready",
     "/capabilities",
-    "/.well-known/agentpay.json",
+    "/.well-known/stellar-oxide-gateway.json",
     "/registry/export",
     "/discovery/resources",
     "/stats",
@@ -44,6 +44,6 @@ test("registers the public gateway routes", () => {
     "/data",
     "/compute",
   ]);
-  assert.equal(typeof app.locals.agentpayProvider?.getReadinessReport, "function");
-  assert.equal(typeof app.locals.agentpayProvider?.close, "function");
+  assert.equal(typeof app.locals.stellarOxideGatewayProvider?.getReadinessReport, "function");
+  assert.equal(typeof app.locals.stellarOxideGatewayProvider?.close, "function");
 });

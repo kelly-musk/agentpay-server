@@ -142,7 +142,7 @@ test("supports postgres-backed intent storage through an injected query client",
     createPostgresIntentStorage({
       client: createIntentClient(),
       schemaName: "public",
-      tableName: "agentpay_intents_test",
+      tableName: "stellar_oxide_gateway_intents_test",
     }),
   );
 
@@ -170,7 +170,7 @@ test("supports postgres-backed usage storage through an injected query client", 
     createPostgresUsageStorage({
       client: createUsageClient(),
       schemaName: "public",
-      tableName: "agentpay_usage_test",
+      tableName: "stellar_oxide_gateway_usage_test",
     }),
   );
 

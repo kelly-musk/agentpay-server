@@ -11,17 +11,17 @@ import {
   createUsageStore,
 } from "../server/logger.js";
 
-const connectionString = process.env.DATABASE_URL || process.env.AGENTPAY_TEST_DATABASE_URL;
+const connectionString = process.env.DATABASE_URL || process.env.STELLAR_OXIDE_GATEWAY_TEST_DATABASE_URL;
 
 test(
   "live Postgres storage adapters create, read, update, summarize, and close correctly",
   {
-    skip: !connectionString ? "Set DATABASE_URL or AGENTPAY_TEST_DATABASE_URL to run live Postgres tests." : false,
+    skip: !connectionString ? "Set DATABASE_URL or STELLAR_OXIDE_GATEWAY_TEST_DATABASE_URL to run live Postgres tests." : false,
   },
   async () => {
     const suffix = randomUUID().replace(/-/g, "_");
-    const intentsTable = `agentpay_intents_${suffix}`;
-    const usageTable = `agentpay_usage_${suffix}`;
+    const intentsTable = `stellar_oxide_gateway_intents_${suffix}`;
+    const usageTable = `stellar_oxide_gateway_usage_${suffix}`;
 
     const intentStore = createIntentStore(
       createPostgresIntentStorage({

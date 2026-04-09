@@ -1,9 +1,9 @@
 import express from "express";
-import { NETWORK_IDS, registerAgentPayRoutes } from "../index.js";
+import { NETWORK_IDS, registerStellarOxideGatewayRoutes } from "../index.js";
 
 const app = express();
 
-registerAgentPayRoutes(app, {
+registerStellarOxideGatewayRoutes(app, {
   config: {
     port: Number.parseInt(process.env.PORT || "3000", 10),
     gatewayUrl: process.env.GATEWAY_URL || "http://localhost:3000",
@@ -114,7 +114,7 @@ registerAgentPayRoutes(app, {
           sources: Array.from({ length: Math.max(1, Math.min(topK, 5)) }, (_, index) => ({
             title: `Search result ${index + 1} for "${query}"`,
             url: `https://example.com/search/${index + 1}?q=${encodeURIComponent(query)}`,
-            snippet: `This is example search result ${index + 1} served by AgentPay.`,
+            snippet: `This is example search result ${index + 1} served by Stellar Oxide Gateway.`,
           })),
           source: "paid-search-template",
           network: config.network,
@@ -125,15 +125,15 @@ registerAgentPayRoutes(app, {
   storage: {
     intents: {
       type: "sqlite",
-      filename: "./agentpay-intents.db",
+      filename: "./stellar-oxide-gateway-intents.db",
     },
     usage: {
       type: "sqlite",
-      filename: "./agentpay-usage.db",
+      filename: "./stellar-oxide-gateway-usage.db",
     },
   },
 });
 
 app.listen(process.env.PORT || 3000, () => {
-  console.log(`Paid search AgentPay provider running on http://localhost:${process.env.PORT || 3000}`);
+  console.log(`Paid search Stellar Oxide Gateway provider running on http://localhost:${process.env.PORT || 3000}`);
 });

@@ -1,9 +1,9 @@
 export { payFetch } from "./payFetch.js";
 export {
-  fetchAgentPayManifest,
-  fetchAgentPayCapabilities,
-  fetchAgentPayRegistryExport,
-  fetchAgentPayDiscovery,
-  resolveAgentPayService,
-  selectAgentPayRoute,
+  fetchStellarOxideGatewayManifest,
+  fetchStellarOxideGatewayCapabilities,
+  fetchStellarOxideGatewayRegistryExport,
+  fetchStellarOxideGatewayDiscovery,
+  resolveStellarOxideGatewayService,
+  selectStellarOxideGatewayRoute,
 } from "./lib/service-resolution.js";

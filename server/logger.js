@@ -6,9 +6,9 @@ import {
 } from "./postgres.js";
 
 const DEFAULT_LOG_FILE = "logs.txt";
-const DEFAULT_USAGE_SQLITE_FILE = "agentpay-usage.db";
+const DEFAULT_USAGE_SQLITE_FILE = "stellar-oxide-gateway-usage.db";
 const DEFAULT_USAGE_POSTGRES_SCHEMA = "public";
-const DEFAULT_USAGE_POSTGRES_TABLE = "agentpay_usage";
+const DEFAULT_USAGE_POSTGRES_TABLE = "stellar_oxide_gateway_usage";
 
 function parseEntries(raw) {
   if (!raw.trim()) {

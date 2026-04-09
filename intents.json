@@ -1,0 +1,116 @@
+[
+  {
+    "id": "intent_74442a36-de4b-48d3-8d07-b52dd43fee43",
+    "endpoint": "intent_free",
+    "query": "hello free intent",
+    "amount": "0.00",
+    "asset": "XLM",
+    "status": "executed",
+    "createdAt": "2026-04-09T15:46:20.370Z",
+    "updatedAt": "2026-04-09T15:46:20.374Z",
+    "paymentRequired": false,
+    "paymentMetadata": {
+      "tenantId": "tenant_free",
+      "plan": "pro"
+    },
+    "payment": {
+      "status": "not_required",
+      "network": "stellar-testnet",
+      "asset": "XLM",
+      "amount": "0.00",
+      "metadata": {
+        "tenantId": "tenant_free",
+        "plan": "pro"
+      }
+    },
+    "settlement": null,
+    "result": {
+      "ok": true,
+      "source": "intent-free"
+    },
+    "executedAt": "2026-04-09T15:46:20.374Z"
+  },
+  {
+    "id": "intent_20f286ce-8e4d-4e42-bd7a-a4f36e253a18",
+    "endpoint": "intent_paid",
+    "query": "this query should trigger a higher intent price",
+    "amount": "0.09",
+    "asset": "XLM",
+    "status": "pending",
+    "createdAt": "2026-04-09T15:46:20.371Z",
+    "updatedAt": "2026-04-09T15:46:20.371Z",
+    "paymentRequired": true,
+    "paymentMetadata": {
+      "tenantId": "tenant_paid"
+    }
+  },
+  {
+    "id": "intent_176e044a-1334-45aa-a14e-b2a0d0c024fb",
+    "endpoint": "ai",
+    "query": "hello built-in intent",
+    "amount": "0.03",
+    "asset": "XLM",
+    "status": "pending",
+    "createdAt": "2026-04-09T15:46:20.382Z",
+    "updatedAt": "2026-04-09T15:46:20.382Z",
+    "paymentRequired": true,
+    "paymentMetadata": {}
+  },
+  {
+    "id": "intent_b3639dec-cde9-480c-8887-20cefcc5032a",
+    "endpoint": "intent_free",
+    "query": "hello free intent",
+    "amount": "0.00",
+    "asset": "XLM",
+    "status": "executed",
+    "createdAt": "2026-04-09T15:47:33.289Z",
+    "updatedAt": "2026-04-09T15:47:33.294Z",
+    "paymentRequired": false,
+    "paymentMetadata": {
+      "tenantId": "tenant_free",
+      "plan": "pro"
+    },
+    "payment": {
+      "status": "not_required",
+      "network": "stellar-testnet",
+      "asset": "XLM",
+      "amount": "0.00",
+      "metadata": {
+        "tenantId": "tenant_free",
+        "plan": "pro"
+      }
+    },
+    "settlement": null,
+    "result": {
+      "ok": true,
+      "source": "intent-free"
+    },
+    "executedAt": "2026-04-09T15:47:33.294Z"
+  },
+  {
+    "id": "intent_72374783-b34b-4187-8c7b-00dff03ce2d9",
+    "endpoint": "intent_paid",
+    "query": "this query should trigger a higher intent price",
+    "amount": "0.09",
+    "asset": "XLM",
+    "status": "pending",
+    "createdAt": "2026-04-09T15:47:33.291Z",
+    "updatedAt": "2026-04-09T15:47:33.291Z",
+    "paymentRequired": true,
+    "paymentMetadata": {
+      "tenantId": "tenant_paid"
+    }
+  },
+  {
+    "id": "intent_6b514273-f878-49b1-b19e-f46be32b43e2",
+    "endpoint": "ai",
+    "query": "hello built-in intent",
+    "amount": "0.03",
+    "asset": "XLM",
+    "status": "pending",
+    "createdAt": "2026-04-09T15:47:33.296Z",
+    "updatedAt": "2026-04-09T15:47:33.296Z",
+    "paymentRequired": true,
+    "paymentMetadata": {}
+  }
+]

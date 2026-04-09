@@ -1,9 +1,9 @@
 import express from "express";
-import { NETWORK_IDS, registerAgentPayRoutes } from "../index.js";
+import { NETWORK_IDS, registerStellarOxideGatewayRoutes } from "../index.js";
 
 const app = express();
 
-registerAgentPayRoutes(app, {
+registerStellarOxideGatewayRoutes(app, {
   config: {
     port: Number.parseInt(process.env.PORT || "3000", 10),
     gatewayUrl: process.env.GATEWAY_URL || "http://localhost:3000",
@@ -24,7 +24,7 @@ registerAgentPayRoutes(app, {
     provider: {
       id: "example_provider",
       name: "Example Provider",
-      description: "Example AgentPay provider for paid API integrations",
+      description: "Example Stellar Oxide Gateway provider for paid API integrations",
       websiteUrl: "https://example.com",
       supportUrl: "https://example.com/support",
       supportEmail: "support@example.com",
@@ -32,10 +32,10 @@ registerAgentPayRoutes(app, {
     service: {
       id: "example_service",
       name: "Example Paid API Service",
-      description: "Example paid APIs exposed through AgentPay",
+      description: "Example paid APIs exposed through Stellar Oxide Gateway",
       version: "1.0.0",
       category: "paid-agent-api",
-      tags: ["example", "api", "agentpay"],
+      tags: ["example", "api", "stellar-oxide-gateway"],
       audience: ["agents", "developers"],
       documentationUrl: "https://example.com/docs",
     },
@@ -79,15 +79,15 @@ registerAgentPayRoutes(app, {
   storage: {
     intents: {
       type: "sqlite",
-      filename: "./agentpay-intents.db",
+      filename: "./stellar-oxide-gateway-intents.db",
     },
     usage: {
       type: "sqlite",
-      filename: "./agentpay-usage.db",
+      filename: "./stellar-oxide-gateway-usage.db",
     },
   },
 });
 
 app.listen(process.env.PORT || 3000, () => {
-  console.log(`Example AgentPay provider running on http://localhost:${process.env.PORT || 3000}`);
+  console.log(`Example Stellar Oxide Gateway provider running on http://localhost:${process.env.PORT || 3000}`);
 });

@@ -1,11 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createAgentPayApp } from "../server/provider.js";
+import { createStellarOxideGatewayApp } from "../server/provider.js";
 
-const BROKEN_DATABASE_URL = "postgresql://postgres:postgres@127.0.0.1:1/agentpay_unreachable";
+const BROKEN_DATABASE_URL = "postgresql://postgres:postgres@127.0.0.1:1/stellar_oxide_gateway_unreachable";
 
 function createBrokenPostgresApp() {
-  return createAgentPayApp({
+  return createStellarOxideGatewayApp({
     config: {
       port: 3000,
       gatewayUrl: "http://localhost:3000",
@@ -25,13 +25,13 @@ function createBrokenPostgresApp() {
         type: "postgres",
         connectionString: BROKEN_DATABASE_URL,
         schemaName: "public",
-        tableName: "agentpay_intents_broken_test",
+        tableName: "stellar_oxide_gateway_intents_broken_test",
       },
       usage: {
         type: "postgres",
         connectionString: BROKEN_DATABASE_URL,
         schemaName: "public",
-        tableName: "agentpay_usage_broken_test",
+        tableName: "stellar_oxide_gateway_usage_broken_test",
       },
     },
   });

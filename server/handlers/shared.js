@@ -94,7 +94,7 @@ export function createUpstreamHandler(route) {
     };
 
     if (context.intent?.id) {
-      headers["x-agentpay-intent-id"] = context.intent.id;
+      headers["x-stellar-oxide-gateway-intent-id"] = context.intent.id;
     }
 
     if (requestMethod === "GET") {

@@ -1,16 +1,16 @@
 import { pathToFileURL } from "url";
-import { createAgentPayApp, createAgentPayProvider } from "./provider.js";
+import { createStellarOxideGatewayApp, createStellarOxideGatewayProvider } from "./provider.js";
 import { loadGatewayConfig } from "./payments.js";
 
 export function createServerApp(config = loadGatewayConfig()) {
-  return createAgentPayApp({ config });
+  return createStellarOxideGatewayApp({ config });
 }
 
 export function startServer(config = loadGatewayConfig()) {
   const app = createServerApp(config);
-  const provider = app.locals.agentpayProvider;
+  const provider = app.locals.stellarOxideGatewayProvider;
   const server = app.listen(config.port, () => {
-    console.log(`AgentPay Gateway running on http://localhost:${config.port}`);
+    console.log(`Stellar Oxide Gateway running on http://localhost:${config.port}`);
   });
   let shuttingDown = false;
 
@@ -26,7 +26,7 @@ export function startServer(config = loadGatewayConfig()) {
           await provider.close();
         }
       } catch (error) {
-        console.error("AgentPay shutdown failed:", error.message);
+        console.error("Stellar Oxide Gateway shutdown failed:", error.message);
       } finally {
         process.exit(0);
       }
@@ -39,7 +39,7 @@ export function startServer(config = loadGatewayConfig()) {
   return server;
 }
 
-export { createAgentPayApp, createAgentPayProvider } from "./provider.js";
+export { createStellarOxideGatewayApp, createStellarOxideGatewayProvider } from "./provider.js";
 
 const isDirectExecution = process.argv[1]
   ? import.meta.url === pathToFileURL(process.argv[1]).href

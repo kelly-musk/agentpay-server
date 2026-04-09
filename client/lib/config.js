@@ -4,8 +4,8 @@ import { dirname, join } from "path";
 
 const CONFIG_DIR =
   process.env.XDG_CONFIG_HOME || join(homedir(), ".config");
-const AGENTPAY_DIR = join(CONFIG_DIR, "agentpay");
-const CONFIG_FILE = join(AGENTPAY_DIR, "config.json");
+const STELLAR_OXIDE_GATEWAY_DIR = join(CONFIG_DIR, "stellar-oxide-gateway");
+const CONFIG_FILE = join(STELLAR_OXIDE_GATEWAY_DIR, "config.json");
 
 function sanitizeConfig(config) {
   return Object.fromEntries(

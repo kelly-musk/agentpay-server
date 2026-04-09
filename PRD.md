@@ -1,4 +1,4 @@
-# AgentPay Gateway — Product Requirements Document
+# Stellar Oxide Gateway — Product Requirements Document
 
 **Version:** 1.0  
 **Date:** April 9, 2026  
@@ -10,15 +10,15 @@
 
 ## Executive Summary
 
-AgentPay Gateway is agent-native API monetization infrastructure built on Stellar. It transforms any HTTP endpoint into a pay-per-request service using x402-style payment challenges, Stellar-based settlement, and machine-readable responses designed for autonomous agents and programmatic consumers.
+Stellar Oxide Gateway is agent-native API monetization infrastructure built on Stellar. It transforms any HTTP endpoint into a pay-per-request service using x402-style payment challenges, Stellar-based settlement, and machine-readable responses designed for autonomous agents and programmatic consumers.
 
-Unlike traditional API monetization approaches that rely on API keys, subscriptions, or centralized billing systems, AgentPay enables direct machine-to-machine payments at the protocol level. Callers pay only when they use a service, with payments verified and settled on-chain in real-time.
+Unlike traditional API monetization approaches that rely on API keys, subscriptions, or centralized billing systems, Stellar Oxide Gateway enables direct machine-to-machine payments at the protocol level. Callers pay only when they use a service, with payments verified and settled on-chain in real-time.
 
-The platform is designed as embeddable infrastructure rather than a standalone application. Developers can either deploy AgentPay as a standalone gateway or integrate it directly into their existing Express applications as middleware, making it suitable for a wide range of use cases from AI inference APIs to data services and compute platforms.
+The platform is designed as embeddable infrastructure rather than a standalone application. Developers can either deploy Stellar Oxide Gateway as a standalone gateway or integrate it directly into their existing Express applications as middleware, making it suitable for a wide range of use cases from AI inference APIs to data services and compute platforms.
 
 **Product Evolution:**
 
-AgentPay is evolving from a payment gateway into a full ecosystem infrastructure layer:
+Stellar Oxide Gateway is evolving from a payment gateway into a full ecosystem infrastructure layer:
 
 - **Current State (✅ Implemented):** Paid agent services / APIs wedge — Provider SDK, payment gateway, route protection, intent flows, storage backends, client SDK
 - **Next Phase (🚧 In Progress):** Infrastructure / ecosystem tooling wedge — Service publishing, discovery, registry compatibility, consumer resolution, trust foundations
@@ -99,9 +99,9 @@ The Stellar x402 Hackathon categories explicitly call out:
 - Rating, reputation, and trust systems
 
 **Concrete Demand Signal:**
-The hackathon specifically highlights "pay-per-query web search instead of monthly subscriptions" as a real user pain point. AgentPay's `examples/paid-search-provider.js` directly addresses this use case.
+The hackathon specifically highlights "pay-per-query web search instead of monthly subscriptions" as a real user pain point. Stellar Oxide Gateway's `examples/paid-search-provider.js` directly addresses this use case.
 
-AgentPay is strongest in category 1, provides foundational infrastructure for category 2, and creates the primitives needed for category 3.
+Stellar Oxide Gateway is strongest in category 1, provides foundational infrastructure for category 2, and creates the primitives needed for category 3.
 
 ---
 
@@ -109,7 +109,7 @@ AgentPay is strongest in category 1, provides foundational infrastructure for ca
 
 ### Core Concept
 
-AgentPay implements the x402 payment protocol on Stellar with a two-layer architecture:
+Stellar Oxide Gateway implements the x402 payment protocol on Stellar with a two-layer architecture:
 
 **Layer 1: Paid Agent Services / APIs (✅ Implemented)**
 
@@ -154,9 +154,9 @@ Trust and reputation signals emerge over time
 - Client SDK with payFetch and service resolution
 
 **Phase 2: Ecosystem Tooling (🚧 Current Focus)**
-- Versioned provider manifest at `/.well-known/agentpay.json`
+- Versioned provider manifest at `/.well-known/stellar-oxide-gateway.json`
 - Registry-friendly export at `/registry/export` with filtering
-- Consumer-side service resolution (`resolveAgentPayService`, `selectAgentPayRoute`)
+- Consumer-side service resolution (`resolveStellarOxideGatewayService`, `selectStellarOxideGatewayRoute`)
 - Explicit contract versioning for all public surfaces
 - Provider and service identity metadata
 - Trust foundations (reserved fields for signatures, reputation)
@@ -189,7 +189,7 @@ The implementer is the provider of the paid API.
 - A platform exposing a paid internal tool
 
 **Responsibilities:**
-- Integrate AgentPay into their service
+- Integrate Stellar Oxide Gateway into their service
 - Configure protected routes with metadata
 - Set pricing (static or dynamic)
 - Provide merchant wallet
@@ -228,7 +228,7 @@ Registries, bazaars, marketplaces, and platforms.
 
 ### Mode 1: Standalone Gateway
 
-Deploy AgentPay as its own service that sits in front of backend APIs.
+Deploy Stellar Oxide Gateway as its own service that sits in front of backend APIs.
 
 **Best for:**
 - Hosted gateway deployments
@@ -238,7 +238,7 @@ Deploy AgentPay as its own service that sits in front of backend APIs.
 
 ### Mode 2: Embedded Provider
 
-Mount AgentPay routes directly inside an Express application using `registerAgentPayRoutes(app, options)`.
+Mount Stellar Oxide Gateway routes directly inside an Express application using `registerStellarOxideGatewayRoutes(app, options)`.
 
 **Best for:**
 - Existing APIs
@@ -408,7 +408,7 @@ Mount AgentPay routes directly inside an Express application using `registerAgen
 **Description:** Providers must expose machine-readable metadata for ecosystem tooling, registries, and agent platforms.
 
 **Acceptance Criteria:**
-- `GET /.well-known/agentpay.json` returns versioned manifest
+- `GET /.well-known/stellar-oxide-gateway.json` returns versioned manifest
 - `GET /registry/export` returns flattened listing with filters
 - `GET /capabilities` returns endpoint catalog with payment metadata
 - `GET /discovery/resources` returns paginated resource list
@@ -440,12 +440,12 @@ Mount AgentPay routes directly inside an Express application using `registerAgen
 
 ### FR-10: Service Resolution
 
-**Description:** Consumers need programmatic discovery of AgentPay services.
+**Description:** Consumers need programmatic discovery of Stellar Oxide Gateway services.
 
 **Acceptance Criteria:**
-- `resolveAgentPayService(baseUrl)` fetches all discovery surfaces
+- `resolveStellarOxideGatewayService(baseUrl)` fetches all discovery surfaces
 - Returns manifest, capabilities, registry, discovery in parallel
-- `selectAgentPayRoute(service, criteria)` filters routes by id, category, method, tag, audience
+- `selectStellarOxideGatewayRoute(service, criteria)` filters routes by id, category, method, tag, audience
 - Supports filtering at resolution time via options
 
 **Implementation Status:** ✅ Implemented  
@@ -465,7 +465,7 @@ Mount AgentPay routes directly inside an Express application using `registerAgen
 - Provider exposes `close()` for graceful shutdown
 
 **Implementation Status:** ✅ Implemented  
-**Location:** `server/provider.js` — `createAgentPayProvider()`
+**Location:** `server/provider.js` — `createStellarOxideGatewayProvider()`
 
 ---
 
@@ -700,7 +700,7 @@ MERCHANT_ASSET_ISSUER=G...
 **Goal:** Charge per inference request with dynamic pricing based on model size
 
 **Flow:**
-1. Platform mounts AgentPay routes for `/inference`
+1. Platform mounts Stellar Oxide Gateway routes for `/inference`
 2. Route uses `pricing` function to calculate cost based on model parameter
 3. Caller creates intent with model and prompt
 4. Caller pays against intent
@@ -852,7 +852,7 @@ MERCHANT_ASSET_ISSUER=G...
 
 ## Appendix A: Default Endpoints
 
-AgentPay includes three built-in endpoints for demonstration:
+Stellar Oxide Gateway includes three built-in endpoints for demonstration:
 
 | Endpoint | Method | Path | Category | Base Price | Description |
 |---|---|---|---|---|---|
@@ -869,18 +869,18 @@ All default endpoints add a $0.01 surcharge for queries over 20 characters.
 ```javascript
 // Main package
 import {
-  registerAgentPayRoutes,
-  createAgentPayApp,
-  createAgentPayProvider,
+  registerStellarOxideGatewayRoutes,
+  createStellarOxideGatewayApp,
+  createStellarOxideGatewayProvider,
   validateProviderOptions,
   NETWORK_IDS,
   SUPPORTED_NETWORK_IDS,
   isSupportedNetworkId,
   CONTRACT_VERSIONS,
   payFetch,
-  resolveAgentPayService,
-  selectAgentPayRoute
-} from "agentpay-gateway";
+  resolveStellarOxideGatewayService,
+  selectStellarOxideGatewayRoute
+} from "stellar-oxide-gateway";
 
 // Server utilities
 import {
@@ -891,19 +891,19 @@ import {
   requirePaymentWith,
   createIntentStore,
   createUsageStore
-} from "agentpay-gateway/server";
+} from "stellar-oxide-gateway/server";
 
 // Pricing utilities
-import { getPriceUsd } from "agentpay-gateway/pricing";
+import { getPriceUsd } from "stellar-oxide-gateway/pricing";
 
 // Client utilities
 import {
   payFetch,
-  fetchAgentPayManifest,
-  fetchAgentPayCapabilities,
-  fetchAgentPayRegistryExport,
-  fetchAgentPayDiscovery
-} from "agentpay-gateway/client";
+  fetchStellarOxideGatewayManifest,
+  fetchStellarOxideGatewayCapabilities,
+  fetchStellarOxideGatewayRegistryExport,
+  fetchStellarOxideGatewayDiscovery
+} from "stellar-oxide-gateway/client";
 ```
 
 ---
@@ -957,7 +957,7 @@ import {
 - [ ] Monitor settlement success rate
 
 **Post-deployment:**
-- [ ] Publish manifest at `/.well-known/agentpay.json`
+- [ ] Publish manifest at `/.well-known/stellar-oxide-gateway.json`
 - [ ] Submit registry export to ecosystem directories
 - [ ] Monitor `GET /stats` for usage
 - [ ] Set up alerts for storage health failures
@@ -967,7 +967,7 @@ import {
 
 ## Appendix E: Paid Agent API Templates
 
-AgentPay provides four first-class templates for common paid agent services:
+Stellar Oxide Gateway provides four first-class templates for common paid agent services:
 
 ### 1. Paid Search Provider
 **File:** `examples/paid-search-provider.js`  

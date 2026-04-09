@@ -628,9 +628,9 @@ function getProviderMetadata(config) {
   const provider = config.provider || {};
 
   return {
-    id: provider.id || "agentpay-provider",
-    name: provider.name || "AgentPay Provider",
-    description: provider.description || "AgentPay-compatible paid service provider",
+    id: provider.id || "stellar-oxide-gateway-provider",
+    name: provider.name || "Stellar Oxide Gateway Provider",
+    description: provider.description || "Stellar Oxide Gateway-compatible paid service provider",
     websiteUrl: provider.websiteUrl || null,
     supportUrl: provider.supportUrl || null,
     supportEmail: provider.supportEmail || null,
@@ -641,9 +641,9 @@ function getServiceMetadata(config, endpointCatalog) {
   const service = config.service || {};
 
   return {
-    id: service.id || "agentpay-service",
-    name: service.name || "AgentPay Service",
-    description: service.description || "Paid agent service powered by AgentPay",
+    id: service.id || "stellar-oxide-gateway-service",
+    name: service.name || "Stellar Oxide Gateway Service",
+    description: service.description || "Paid agent service powered by Stellar Oxide Gateway",
     version: service.version || "1.0.0",
     category: service.category || "paid-agent-api",
     tags: Array.isArray(service.tags) ? service.tags : [],
@@ -1128,7 +1128,7 @@ export function createPaymentContext(rawConfig) {
     const priceUsd = options.priceUsd || getPriceUsdFromCatalog(endpointCatalog, endpointId, query);
     const endpoint = getEndpointConfigFromCatalog(endpointCatalog, endpointId);
     const description =
-      options.description || `AgentPay ${endpoint.description}`;
+      options.description || `Stellar Oxide Gateway ${endpoint.description}`;
     const outputSchema = options.outputSchema
       || endpoint.outputSchema
       || buildOutputSchema(config.asset.symbol);
@@ -1170,7 +1170,7 @@ export function createPaymentContext(rawConfig) {
   function getCapabilities() {
     return {
       version: CONTRACT_VERSIONS.CAPABILITIES,
-      service: "agentpay-gateway",
+      service: "stellar-oxide-gateway",
       protocol: "x402-stellar",
       network: config.network,
       facilitator: config.facilitatorUrl,
@@ -1191,7 +1191,7 @@ export function createPaymentContext(rawConfig) {
     const provider = getProviderMetadata(config);
     const service = getServiceMetadata(config, endpointCatalog);
     const endpoints = listEndpointsFromCatalog(endpointCatalog);
-    const manifestUrl = `${config.gatewayUrl}/.well-known/agentpay.json`;
+    const manifestUrl = `${config.gatewayUrl}/.well-known/stellar-oxide-gateway.json`;
 
     return {
       manifestVersion: CONTRACT_VERSIONS.MANIFEST,

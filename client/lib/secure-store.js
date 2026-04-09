@@ -1,6 +1,6 @@
 import keytar from "keytar";
 
-const SERVICE_NAME = "agentpay";
+const SERVICE_NAME = "stellar-oxide-gateway";
 const ACCOUNT_NAME = "default-wallet";
 
 export async function saveStoredSecret(publicKey, secretKey) {

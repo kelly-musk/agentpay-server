@@ -1,6 +1,6 @@
 # Production Readiness
 
-This document tracks the work required to move AgentPay from a well-tested
+This document tracks the work required to move Stellar Oxide Gateway from a well-tested
 development SDK into a production-confident infrastructure product.
 
 The current repo has strong local validation and unit/integration-style repo
@@ -155,7 +155,7 @@ Before any production claim, require:
 
 ## Practical Definition of Production Confidence
 
-AgentPay should only be called production-confident when we can show:
+Stellar Oxide Gateway should only be called production-confident when we can show:
 
 - real HTTP behavior is tested
 - real storage backends are tested

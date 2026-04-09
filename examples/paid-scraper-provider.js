@@ -1,9 +1,9 @@
 import express from "express";
-import { NETWORK_IDS, registerAgentPayRoutes } from "../index.js";
+import { NETWORK_IDS, registerStellarOxideGatewayRoutes } from "../index.js";
 
 const app = express();
 
-registerAgentPayRoutes(app, {
+registerStellarOxideGatewayRoutes(app, {
   config: {
     port: Number.parseInt(process.env.PORT || "3000", 10),
     gatewayUrl: process.env.GATEWAY_URL || "http://localhost:3000",
@@ -101,15 +101,15 @@ registerAgentPayRoutes(app, {
   storage: {
     intents: {
       type: "sqlite",
-      filename: "./agentpay-intents.db",
+      filename: "./stellar-oxide-gateway-intents.db",
     },
     usage: {
       type: "sqlite",
-      filename: "./agentpay-usage.db",
+      filename: "./stellar-oxide-gateway-usage.db",
     },
   },
 });
 
 app.listen(process.env.PORT || 3000, () => {
-  console.log(`Paid scraper AgentPay provider running on http://localhost:${process.env.PORT || 3000}`);
+  console.log(`Paid scraper Stellar Oxide Gateway provider running on http://localhost:${process.env.PORT || 3000}`);
 });

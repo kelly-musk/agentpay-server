@@ -20,17 +20,17 @@ async function fetchJson(url, fetchImpl = fetch) {
   return readJsonResponse(response);
 }
 
-export async function fetchAgentPayManifest(baseUrl, options = {}) {
+export async function fetchStellarOxideGatewayManifest(baseUrl, options = {}) {
   const fetchImpl = options.fetch || fetch;
-  return fetchJson(`${normalizeBaseUrl(baseUrl)}/.well-known/agentpay.json`, fetchImpl);
+  return fetchJson(`${normalizeBaseUrl(baseUrl)}/.well-known/stellar-oxide-gateway.json`, fetchImpl);
 }
 
-export async function fetchAgentPayCapabilities(baseUrl, options = {}) {
+export async function fetchStellarOxideGatewayCapabilities(baseUrl, options = {}) {
   const fetchImpl = options.fetch || fetch;
   return fetchJson(`${normalizeBaseUrl(baseUrl)}/capabilities`, fetchImpl);
 }
 
-export async function fetchAgentPayRegistryExport(baseUrl, options = {}) {
+export async function fetchStellarOxideGatewayRegistryExport(baseUrl, options = {}) {
   const fetchImpl = options.fetch || fetch;
   const params = new URLSearchParams();
 
@@ -50,24 +50,24 @@ export async function fetchAgentPayRegistryExport(baseUrl, options = {}) {
   return fetchJson(`${normalizeBaseUrl(baseUrl)}/registry/export${suffix}`, fetchImpl);
 }
 
-export async function fetchAgentPayDiscovery(baseUrl, options = {}) {
+export async function fetchStellarOxideGatewayDiscovery(baseUrl, options = {}) {
   const fetchImpl = options.fetch || fetch;
   return fetchJson(`${normalizeBaseUrl(baseUrl)}/discovery/resources`, fetchImpl);
 }
 
-export async function resolveAgentPayService(baseUrl, options = {}) {
+export async function resolveStellarOxideGatewayService(baseUrl, options = {}) {
   const fetchImpl = options.fetch || fetch;
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
   const [manifest, capabilities, registry, discovery] = await Promise.all([
-    fetchAgentPayManifest(normalizedBaseUrl, { fetch: fetchImpl }),
-    fetchAgentPayCapabilities(normalizedBaseUrl, { fetch: fetchImpl }),
-    fetchAgentPayRegistryExport(normalizedBaseUrl, {
+    fetchStellarOxideGatewayManifest(normalizedBaseUrl, { fetch: fetchImpl }),
+    fetchStellarOxideGatewayCapabilities(normalizedBaseUrl, { fetch: fetchImpl }),
+    fetchStellarOxideGatewayRegistryExport(normalizedBaseUrl, {
       fetch: fetchImpl,
       category: options.category,
       tag: options.tag,
       audience: options.audience,
     }),
-    fetchAgentPayDiscovery(normalizedBaseUrl, { fetch: fetchImpl }),
+    fetchStellarOxideGatewayDiscovery(normalizedBaseUrl, { fetch: fetchImpl }),
   ]);
 
   return {
@@ -79,7 +79,7 @@ export async function resolveAgentPayService(baseUrl, options = {}) {
   };
 }
 
-export function selectAgentPayRoute(serviceResolution, criteria = {}) {
+export function selectStellarOxideGatewayRoute(serviceResolution, criteria = {}) {
   const routes = serviceResolution?.registry?.routes || [];
 
   return routes.find((route) => {
