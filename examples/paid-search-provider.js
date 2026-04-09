@@ -21,6 +21,24 @@ registerAgentPayRoutes(app, {
           ? "Stellar Lumens"
           : (process.env.X402_ASSET_NAME || "Stellar Token"),
     },
+    provider: {
+      id: "search_provider",
+      name: "Search Provider",
+      description: "Provider of paid search APIs for agent workflows",
+      websiteUrl: "https://example.com/search",
+      supportUrl: "https://example.com/search/support",
+      supportEmail: "search-support@example.com",
+    },
+    service: {
+      id: "search_service",
+      name: "Paid Search Service",
+      description: "Pay-per-query search API for agents and developers",
+      version: "1.0.0",
+      category: "search-api",
+      tags: ["search", "retrieval", "web"],
+      audience: ["agents", "developers"],
+      documentationUrl: "https://example.com/search/docs",
+    },
   },
   routes: [
     {

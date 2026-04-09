@@ -21,6 +21,24 @@ registerAgentPayRoutes(app, {
           ? "Stellar Lumens"
           : (process.env.X402_ASSET_NAME || "Stellar Token"),
     },
+    provider: {
+      id: "example_provider",
+      name: "Example Provider",
+      description: "Example AgentPay provider for paid API integrations",
+      websiteUrl: "https://example.com",
+      supportUrl: "https://example.com/support",
+      supportEmail: "support@example.com",
+    },
+    service: {
+      id: "example_service",
+      name: "Example Paid API Service",
+      description: "Example paid APIs exposed through AgentPay",
+      version: "1.0.0",
+      category: "paid-agent-api",
+      tags: ["example", "api", "agentpay"],
+      audience: ["agents", "developers"],
+      documentationUrl: "https://example.com/docs",
+    },
   },
   routes: [
     {

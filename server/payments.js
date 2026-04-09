@@ -112,6 +112,62 @@ function assertValidUrl(name, value) {
   }
 }
 
+function assertOptionalString(name, value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    throw new Error(`Invalid ${name}: expected a string`);
+  }
+
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+function assertOptionalUrl(name, value) {
+  const normalized = assertOptionalString(name, value);
+  return normalized ? assertValidUrl(name, normalized) : null;
+}
+
+function assertOptionalEmail(name, value) {
+  const normalized = assertOptionalString(name, value);
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+    throw new Error(`Invalid ${name}: expected an email address`);
+  }
+
+  return normalized;
+}
+
+function normalizeStringArray(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => String(entry || "").trim())
+    .filter(Boolean);
+}
+
+function assertOptionalId(name, value) {
+  const normalized = assertOptionalString(name, value);
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (!/^[A-Za-z0-9._-]+$/.test(normalized)) {
+    throw new Error(`Invalid ${name}: expected letters, numbers, dot, underscore, or dash`);
+  }
+
+  return normalized;
+}
+
 function validateAssetConfig(asset) {
   if (!asset || typeof asset !== "object") {
     throw new Error("Invalid asset config: expected an object");
@@ -132,6 +188,38 @@ function validateAssetConfig(asset) {
   if (!asset.displayName || typeof asset.displayName !== "string") {
     throw new Error("Invalid asset config: missing displayName");
   }
+}
+
+function validateProviderMetadata(provider = {}) {
+  if (!provider || typeof provider !== "object" || Array.isArray(provider)) {
+    throw new Error("Invalid provider config: expected an object");
+  }
+
+  return {
+    id: assertOptionalId("provider.id", provider.id),
+    name: assertOptionalString("provider.name", provider.name),
+    description: assertOptionalString("provider.description", provider.description),
+    websiteUrl: assertOptionalUrl("provider.websiteUrl", provider.websiteUrl),
+    supportUrl: assertOptionalUrl("provider.supportUrl", provider.supportUrl),
+    supportEmail: assertOptionalEmail("provider.supportEmail", provider.supportEmail),
+  };
+}
+
+function validateServiceMetadata(service = {}) {
+  if (!service || typeof service !== "object" || Array.isArray(service)) {
+    throw new Error("Invalid service config: expected an object");
+  }
+
+  return {
+    id: assertOptionalId("service.id", service.id),
+    name: assertOptionalString("service.name", service.name),
+    description: assertOptionalString("service.description", service.description),
+    version: assertOptionalString("service.version", service.version),
+    category: assertOptionalString("service.category", service.category),
+    tags: normalizeStringArray(service.tags),
+    audience: normalizeStringArray(service.audience),
+    documentationUrl: assertOptionalUrl("service.documentationUrl", service.documentationUrl),
+  };
 }
 
 export function validateGatewayConfig(config) {
@@ -177,6 +265,8 @@ export function validateGatewayConfig(config) {
   );
 
   validateAssetConfig(config.asset);
+  const provider = validateProviderMetadata(config.provider || {});
+  const service = validateServiceMetadata(config.service || {});
 
   return {
     ...config,
@@ -184,6 +274,8 @@ export function validateGatewayConfig(config) {
     network,
     gatewayUrl,
     facilitatorUrl,
+    provider,
+    service,
   };
 }
 

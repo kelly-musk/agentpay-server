@@ -96,6 +96,7 @@ test("builds a versioned provider manifest for ecosystem tooling", () => {
   assert.equal(manifest.provider.id, "acme");
   assert.equal(manifest.provider.name, "Acme Data");
   assert.equal(manifest.provider.supportEmail, "support@example.com");
+  assert.equal(manifest.provider.websiteUrl, null);
   assert.equal(manifest.service.id, "market-feed");
   assert.equal(manifest.service.name, "Market Feed");
   assert.equal(manifest.service.category, "financial-data");
@@ -240,6 +241,24 @@ test("validates gateway config before use", () => {
   assert.throws(
     () => validateGatewayConfig({ ...config, network: NETWORK_IDS.BASE_SEPOLIA }),
     /currently supports stellar-testnet, stellar/,
+  );
+  assert.throws(
+    () => validateGatewayConfig({
+      ...config,
+      provider: {
+        supportEmail: "not-an-email",
+      },
+    }),
+    /provider\.supportEmail/,
+  );
+  assert.throws(
+    () => validateGatewayConfig({
+      ...config,
+      service: {
+        documentationUrl: "not-a-url",
+      },
+    }),
+    /service\.documentationUrl/,
   );
 });
 
