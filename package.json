@@ -26,7 +26,10 @@
     "test:production": "yarn node --test --test-concurrency=1 production-tests/*.test.mjs",
     "build": "yarn node scripts/build.mjs",
     "check": "yarn lint && yarn test",
-    "smoke": "yarn node scripts/smoke.mjs"
+    "smoke": "yarn node scripts/smoke.mjs",
+    "demo:comparison": "yarn node src/demo-comparison.js",
+    "demo:traditional": "yarn node src/demo-traditional-api.js",
+    "demo:stellar": "yarn node src/demo-stellar-oxide-gateway.js"
   },
   "dependencies": {
     "@stellar/stellar-sdk": "^15.0.1",

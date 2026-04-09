@@ -754,7 +754,27 @@ Notes:
 - `STELLAR_SECRET_KEY` is still supported as a fallback/dev path for the CLI.
 - the preferred CLI flow is secure local setup via `yarn cli setup`
 
-## Scripts
+## Quick Start
+
+### See the Demo First! 🎬
+
+Want to see the problem and solution in action? Run the side-by-side comparison:
+
+```bash
+# Install dependencies
+yarn install
+
+# Run both traditional API and Stellar Oxide Gateway
+yarn demo:comparison
+```
+
+This starts:
+- **Traditional API** (port 4000) - Shows the problems with API keys, subscriptions, and rate limits
+- **Stellar Oxide Gateway** (port 3000) - Shows the solution with blockchain payments
+
+See [src/README.md](src/README.md) for detailed demo documentation.
+
+### Quick Start (5 minutes)
 
 Install dependencies:
 
